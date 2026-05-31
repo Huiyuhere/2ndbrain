@@ -43,135 +43,438 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
-}
+  --radius: 0.75rem;
 
-.dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+  /* Sky blue Ocean Empire palette */
+  --sky:        #2E86C1;
+  --sky-mid:    #5DADE2;
+  --sky-light:  #85C1E9;
+  --sky-mist:   #EBF5FB;
+
+  /* Gold — big goal only */
+  --gold:        #C9952A;
+  --gold-bright: #F0B429;
+  --gold-glow:   #FEF5E0;
+
+  /* Earth */
+  --sand:  #C4A882;
+  --earth: #8B7355;
+  --moss:  #4A7C59;
+
+  /* Semantic */
+  --background:           #FAF8F5;
+  --foreground:           #1A1714;
+  --card:                 #FFFFFF;
+  --card-foreground:      #1A1714;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #1A1714;
+  --primary:              #2E86C1;
+  --primary-foreground:   #FFFFFF;
+  --secondary:            #F4F1EC;
+  --secondary-foreground: #4A4540;
+  --muted:                #F4F1EC;
+  --muted-foreground:     #9B9490;
+  --accent:               #EBF5FB;
+  --accent-foreground:    #2E86C1;
+  --destructive:          #E74C3C;
+  --destructive-foreground: #FFFFFF;
+  --border:               #E8E3DC;
+  --input:                #E8E3DC;
+  --ring:                 #5DADE2;
+  --chart-1: #2E86C1;
+  --chart-2: #5DADE2;
+  --chart-3: #F0B429;
+  --chart-4: #4A7C59;
+  --chart-5: #C4A882;
+  --sidebar:              #FFFFFF;
+  --sidebar-foreground:   #1A1714;
+  --sidebar-primary:      #2E86C1;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:       #EBF5FB;
+  --sidebar-accent-foreground: #2E86C1;
+  --sidebar-border:       #E8E3DC;
+  --sidebar-ring:         #5DADE2;
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  * { @apply border-border outline-ring/50; }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
-  a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
+  h1, h2, h3 { font-family: 'Playfair Display', serif; }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled), [type="submit"]:not(:disabled),
+  a[href], select:not(:disabled) { @apply cursor-pointer; }
+}
+
+/* ─── LAYOUT SHELL ─────────────────────────────────────────────── */
+
+/* App wrapper: on desktop shows sidebar + content side by side */
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--background);
+}
+
+/* Sidebar — hidden on mobile, visible on desktop */
+.sidebar {
+  display: none;
+}
+
+/* Page content area */
+.page-content {
+  flex: 1;
+  min-height: 100dvh;
+  padding-bottom: 80px; /* space for bottom nav on mobile */
+  overflow-x: hidden;
+}
+
+/* Bottom nav — visible on mobile, hidden on desktop */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 100;
+  height: 64px;
+}
+
+/* Desktop breakpoint */
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    min-width: 240px;
+    background: white;
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    z-index: 50;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .page-content {
+    padding-bottom: 24px;
+    max-width: calc(100vw - 240px);
+  }
+
+  /* On desktop, page inner content has a max width for readability */
+  .page-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
   }
 }
 
+/* Mobile: page inner has normal padding */
+.page-inner {
+  padding: 0;
+}
+
+/* ─── COMPONENTS ────────────────────────────────────────────────── */
+
+/* Goal banner */
+.goal-banner {
+  background: linear-gradient(135deg, #2E86C1, #5DADE2);
+  border-radius: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.goal-banner::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  pointer-events: none;
+}
+
+/* Task card */
+.task-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 12px 14px;
+  transition: box-shadow 0.15s, transform 0.15s;
+  cursor: pointer;
+}
+.task-card:hover {
+  box-shadow: 0 2px 12px rgba(46,134,193,0.1);
+}
+.task-card:active { transform: scale(0.98); }
+
+/* Category pills */
+.pill-work     { background: #E8F4FB; color: #2471A3; }
+.pill-ideas    { background: #FEF5E0; color: #C9952A; }
+.pill-personal { background: #F0EDF8; color: #6B5EA8; }
+.pill-research { background: #E8F8F2; color: #2E8B57; }
+.pill-planning { background: #FEF0E8; color: #C4704A; }
+.pill-exercise { background: #FDECEA; color: #C0392B; }
+
+/* Habit dot */
+.habit-dot {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  border: 2px solid var(--border);
+  background: white;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.habit-dot.done {
+  background: linear-gradient(135deg, #2E86C1, #5DADE2);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(46,134,193,0.3);
+}
+
+/* Streak badge */
+.streak-badge {
+  background: linear-gradient(135deg, #C9952A, #F0B429);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 99px;
+  box-shadow: 0 2px 8px rgba(201,149,42,0.3);
+}
+
+/* Mode pill */
+.mode-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--muted-foreground);
+  transition: all 0.15s;
+}
+.mode-pill.active-mode {
+  background: linear-gradient(135deg, #2E86C1, #5DADE2);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 2px 8px rgba(46,134,193,0.25);
+}
+
+/* Sky gradient button */
+.btn-sky {
+  background: linear-gradient(135deg, #2E86C1, #5DADE2);
+  color: white;
+  box-shadow: 0 4px 16px rgba(46,134,193,0.3);
+  transition: all 0.15s;
+}
+.btn-sky:hover { box-shadow: 0 6px 20px rgba(46,134,193,0.4); transform: translateY(-1px); }
+.btn-sky:active { transform: scale(0.97); }
+
+/* Gold button */
+.btn-gold {
+  background: linear-gradient(135deg, #C9952A, #F0B429);
+  color: white;
+  box-shadow: 0 4px 16px rgba(201,149,42,0.3);
+}
+
+/* Kanban horizontal scroll */
+.kanban-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 16px 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.kanban-scroll::-webkit-scrollbar { display: none; }
+.kanban-col {
+  min-width: 260px;
+  max-width: 260px;
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* On desktop, kanban shows all columns in a grid */
+@media (min-width: 768px) {
+  .kanban-scroll {
+    overflow-x: auto;
+    padding: 0 0 16px;
+    scroll-snap-type: none;
+  }
+  .kanban-col {
+    min-width: 220px;
+    max-width: 220px;
+  }
+}
+
+/* Analytics chart container — fixed size, never breaks */
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.chart-inner {
+  min-width: 320px;
+  width: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #DDD9D2; border-radius: 2px; }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.3s cubic-bezier(0.23,1,0.32,1) both; }
+
+/* Gantt */
+.gantt-track {
+  flex: 1;
+  height: 28px;
+  background: var(--muted);
+  border-radius: 99px;
+  position: relative;
+  overflow: visible;
+}
+.gantt-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+.milestone-diamond {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 12px; height: 12px;
+  background: var(--gold);
+  border: 2px solid white;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+/* Section header */
+.section-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  margin-bottom: 8px;
+}
+.section-hdr-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.section-hdr-action {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sky);
+  cursor: pointer;
+}
+
+/* Topbar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px;
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.topbar-sub {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 1px;
+}
+
+/* Card */
+.card-block {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 16px;
+  margin: 0 16px;
+}
+
+/* Input */
+.input-field {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--foreground);
+  background: white;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-field:focus { border-color: var(--sky); }
+
+/* Prompt block */
+.prompt-block {
+  margin-bottom: 16px;
+}
+.prompt-q {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+/* Tab switcher */
+.tab-switcher {
+  display: flex;
+  gap: 4px;
+  background: var(--muted);
+  border-radius: 0.75rem;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 0.5rem;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: all 0.15s;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, #2E86C1, #5DADE2);
+  color: white;
+  box-shadow: 0 2px 8px rgba(46,134,193,0.25);
+}
+
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
-
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
-
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
-  }
+  .flex { min-height: 0; min-width: 0; }
 }
