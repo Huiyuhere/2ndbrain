@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Task } from '@/lib/store';
 import { useApp } from '@/contexts/AppContext';
 import CategoryPill from './CategoryPill';
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export default function TaskCard({ task, showBorder = false, draggable: isDraggable = false, onDragStart }: Props) {
-  const { updateTask, deleteTask, moveTask } = useApp();
+  const { updateTask, deleteTask, moveTask, state } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -20,6 +20,20 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
   const [addingLink, setAddingLink] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
+  const [showCatPicker, setShowCatPicker] = useState(false);
+  const catPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close category picker when clicking outside
+  useEffect(() => {
+    if (!showCatPicker) return;
+    function handleClick(e: MouseEvent) {
+      if (catPickerRef.current && !catPickerRef.current.contains(e.target as Node)) {
+        setShowCatPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showCatPicker]);
 
   const subtasks = task.subtasks ?? [];
   const doneCount = subtasks.filter(s => s.done).length;
@@ -89,7 +103,40 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
             {task.title}
           </p>
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <CategoryPill categoryId={task.categoryId} size="xs" />
+            <div className="relative" ref={catPickerRef} onClick={e => e.stopPropagation()}>
+              <button
+                onClick={e => { e.stopPropagation(); setShowCatPicker(v => !v); }}
+                className="group flex items-center gap-0.5"
+                title="Change category"
+              >
+                <CategoryPill categoryId={task.categoryId} size="xs" />
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--muted-foreground)] opacity-0 group-hover:opacity-100 transition-opacity -ml-0.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              {showCatPicker && (
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg border border-[var(--border)] p-2 min-w-[160px]">
+                  <p className="text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-2 pb-1.5">Change tag</p>
+                  {state.categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => { updateTask(task.id, { categoryId: cat.id }); setShowCatPicker(false); }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[var(--muted)] ${
+                        cat.id === task.categoryId ? 'bg-[var(--muted)]' : ''
+                      }`}
+                    >
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full text-[10px] px-2 py-0.5 font-semibold"
+                        style={{ background: cat.bgColor, color: cat.textColor }}
+                      >
+                        {cat.emoji} {cat.name}
+                      </span>
+                      {cat.id === task.categoryId && (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-[var(--sky)]"><polyline points="20 6 9 17 4 12"/></svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {task.duration && <span className="text-[10px] text-[var(--muted-foreground)] font-medium">{task.duration}</span>}
             {task.scheduledTime && <span className="text-[10px] bg-[var(--sky-mist)] text-[var(--sky)] font-semibold px-1.5 py-0.5 rounded-full">{task.scheduledTime}</span>}
             {task.notes === 'Overdue' && <span className="text-[10px] text-red-500 font-semibold">Overdue</span>}
