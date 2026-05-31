@@ -41,7 +41,16 @@
 - [x] Dev preview verified: dashboard loads with data, no login, no modal
 - [x] Awaiting user click on Publish button (one-click action in Management UI)
 
-## Journal Backfill (2 days back)
+## Journal Backfill — Add from Journal page
+- [x] Add "+ Backdate" button in Journal page topbar
+- [x] Modal with full date picker (capped at today, no future dates)
+- [x] Morning/Evening toggle inside modal — full forms (mood, sleep, intention, focus / location, title, rating, highlights, free write)
+- [x] Pre-fills with existing entry if one exists for that date
+- [x] Amber warning when overwriting existing entry
+- [x] Date format updates label as date changes
+- [x] TypeScript clean, 18/18 tests pass
+
+## Journal Backfill (2 days back) — Today page
 - [x] Add Today/Yesterday/2-days-ago pills above Morning/Evening tabs in Today.tsx
 - [x] Bind existingMood/existingEvening lookups to selectedDate state
 - [x] saveMorning/saveEvening write `date: selectedDate`
