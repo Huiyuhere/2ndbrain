@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getTodayString } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,18 +52,30 @@ function getDailyQuote() {
   return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
 }
 
+function formatTodayLong() {
+  return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 export default function MorningCheckin({ onClose }: { onClose: () => void }) {
-  const { saveMoodEntry, markCheckinDone } = useApp();
+  const { saveMoodEntry, markCheckinDone, state } = useApp();
   const [mood, setMood] = useState<number>(0);
   const [sleep, setSleep] = useState<number>(0);
   const [intention, setIntention] = useState('');
   const [focus, setFocus] = useState('');
 
   const quote = getDailyQuote();
+  const today = getTodayString();
+
+  // If already checked in today (on any device), close immediately
+  useEffect(() => {
+    if (state.moodEntries.some(e => e.date === today)) {
+      onClose();
+    }
+  }, [state.moodEntries, today, onClose]);
 
   function handleSave() {
     if (!mood || !sleep) return;
-    saveMoodEntry({ date: getTodayString(), mood, sleep, intention, focus });
+    saveMoodEntry({ date: today, mood, sleep, intention, focus });
     markCheckinDone();
     onClose();
   }
@@ -71,21 +83,24 @@ export default function MorningCheckin({ onClose }: { onClose: () => void }) {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
         <motion.div
-          className="relative w-full max-w-[480px] mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden"
-          initial={{ opacity: 0, scale: 0.95, y: 16 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 16 }}
+          className="relative w-full sm:max-w-[480px] sm:mx-4 bg-white sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col"
+          style={{ maxHeight: 'calc(100dvh - 20px)' }}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 40 }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
         >
-          {/* Quote banner */}
-          <div className="px-6 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>
+          {/* Quote banner — fixed at top, never scrolls away */}
+          <div className="px-6 pt-6 pb-5 shrink-0 rounded-t-3xl" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>
+            {/* Drag handle on mobile */}
+            <div className="w-10 h-1 bg-white/30 rounded-full mx-auto mb-4 sm:hidden" />
             <p className="text-white/60 text-[9px] font-semibold uppercase tracking-widest mb-2">✨ Today's reminder</p>
             <p className="text-white font-['Playfair_Display'] italic text-sm leading-relaxed">"{quote.text}"</p>
             {quote.author !== 'Unknown' && (
@@ -93,11 +108,12 @@ export default function MorningCheckin({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          <div className="p-6 pb-8">
+          {/* Scrollable content area */}
+          <div className="overflow-y-auto flex-1 p-6 pb-8">
             {/* Header */}
             <div className="mb-5">
               <h2 className="font-[Playfair_Display] text-xl font-bold text-[var(--foreground)]">Good morning ☀️</h2>
-              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Sunday, 31 May 2026</p>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">{formatTodayLong()}</p>
             </div>
 
             {/* Sleep */}
