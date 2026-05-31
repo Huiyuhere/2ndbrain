@@ -18,17 +18,22 @@ const COLUMNS: Column[] = [
 ];
 
 export default function Board() {
-  const { state, setFocusMode, addTask, moveTask, markCheckinDone } = useApp();
-  const [showCheckin, setShowCheckin] = useState(!state.checkinDone);
+  const { state, loading, setFocusMode, addTask, moveTask, markCheckinDone } = useApp();
+  const [showCheckin, setShowCheckin] = useState(false);
+  const [dismissedCheckin, setDismissedCheckin] = useState(false);
   const [activeCol, setActiveCol] = useState(0);
   const [addingTo, setAddingTo] = useState<Task['column'] | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [dragOverCol, setDragOverCol] = useState<Task['column'] | null>(null);
   const dragTaskId = useRef<string | null>(null);
 
+  // Open the morning check-in only AFTER data has loaded and only if not done today.
+  // Once dismissed in this session, don't reopen until next page mount.
   useEffect(() => {
-    if (!state.checkinDone) setShowCheckin(true);
-  }, [state.checkinDone]);
+    if (loading) return;
+    if (dismissedCheckin) return;
+    setShowCheckin(!state.checkinDone);
+  }, [loading, state.checkinDone, dismissedCheckin]);
 
   const filtered = filterTasksByMode(state.tasks, state.focusMode);
   const tasksByCol = (col: Task['column']) => filtered.filter(t => t.column === col);
@@ -197,7 +202,7 @@ export default function Board() {
       {/* MORNING CHECK-IN */}
       <AnimatePresence>
         {showCheckin && (
-          <MorningCheckin onClose={() => { setShowCheckin(false); markCheckinDone(); }} />
+          <MorningCheckin onClose={() => { setShowCheckin(false); setDismissedCheckin(true); }} />
         )}
       </AnimatePresence>
     </div>

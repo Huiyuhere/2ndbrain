@@ -18,3 +18,9 @@
 - [x] Add workspaceProcedure middleware that guards all data routes
 - [x] Keep auth gate (must be signed in to access), but remove per-user data partitioning
 - [x] Update all 18 vitest tests to reflect shared workspace model (all pass)
+
+## Bug: Morning check-in modal reappears every visit
+- [x] Diagnose why moodEntry for today isn't recognized after loadAll
+- [x] Migrated mobile data (userId=150007) to shared workspace owner (userId=1)
+- [x] Fixed Board.tsx: showCheckin now waits for `loading=false` before deciding, and respects in-session dismissal
+- [ ] User republishes to deploy the fix
