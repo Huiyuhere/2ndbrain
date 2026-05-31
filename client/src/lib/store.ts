@@ -196,8 +196,15 @@ export function getCategoryById(state: AppState, id: string): Category | undefin
   return state.categories.find(c => c.id === id);
 }
 
+/** Returns local date string YYYY-MM-DD without UTC conversion (avoids timezone shift) */
+export function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 export function getTodayString(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalDateStr(new Date());
 }
 
 export function getWeekDates(): string[] {
@@ -207,7 +214,7 @@ export function getWeekDates(): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    return d.toISOString().split('T')[0];
+    return toLocalDateStr(d);
   });
 }
 
@@ -218,7 +225,7 @@ export function getStreak(habits: Habit[]): number {
   for (let i = 0; i < 30; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const ds = d.toISOString().split('T')[0];
+    const ds = toLocalDateStr(d);
     const anyDone = habits.some(h => h.completedDates.includes(ds));
     if (anyDone) streak++;
     else if (i > 0) break;

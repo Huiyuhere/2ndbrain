@@ -1,12 +1,24 @@
 // WeekStrip — shared week header used by Today and Calendar pages.
 // Ocean Empire design: active day gets sky-blue gradient pill, others are white with border.
 // Supports optional event dots and optional click handler for day selection.
+//
+// IMPORTANT: Uses local date arithmetic (not toISOString) to avoid UTC-offset bugs
+// where SGT (UTC+8) midnight would shift the date back by one day.
 
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-function getWeekDays(): Date[] {
-  const today = new Date(2026, 4, 31); // May 31 2026
-  const dow = today.getDay();
+/** Returns the local date string YYYY-MM-DD without UTC conversion */
+export function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Returns the 7 Date objects for the current week (Sun–Sat) based on real current date */
+export function getWeekDays(): Date[] {
+  const today = new Date();
+  const dow = today.getDay(); // 0=Sun … 6=Sat
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - dow + i);
@@ -25,7 +37,12 @@ type Props = {
 
 export default function WeekStrip({ activeIndex, onDaySelect, eventDots }: Props) {
   const weekDays = getWeekDays();
-  const todayIdx = weekDays.findIndex(d => d.getDate() === 31 && d.getMonth() === 4);
+  const today = new Date();
+  const todayIdx = weekDays.findIndex(d =>
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  );
   const active = activeIndex ?? todayIdx;
 
   return (

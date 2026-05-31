@@ -3,28 +3,23 @@ import { useApp } from '@/contexts/AppContext';
 import { Task } from '@/lib/store';
 import CategoryPill from '@/components/CategoryPill';
 import GoalBanner from '@/components/GoalBanner';
-import WeekStrip from '@/components/WeekStrip';
+import WeekStrip, { getWeekDays, toLocalDateStr } from '@/components/WeekStrip';
 import { toast } from 'sonner';
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6am - 9pm
-
-function getWeekDays() {
-  const today = new Date(2026, 4, 31);
-  const dow = today.getDay();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - dow + i);
-    return d;
-  });
-}
-
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6am – 9pm
 const DURATIONS = ['30m', '1h', '1.5h', '2h', '3h'];
 
 export default function CalendarPage() {
   const { state, updateTask } = useApp();
-  const [selectedDay, setSelectedDay] = useState(0); // Sunday = today (index 0 in week, but today is index 0 of May31 week)
+
+  // Use shared helper — always based on real current date
   const weekDays = getWeekDays();
-  const todayIdx = weekDays.findIndex(d => d.getDate() === 31 && d.getMonth() === 4);
+  const today = new Date();
+  const todayIdx = weekDays.findIndex(d =>
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  );
   const [activeDay, setActiveDay] = useState(todayIdx);
   const [panelOpen, setPanelOpen] = useState(false);
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
@@ -33,7 +28,8 @@ export default function CalendarPage() {
   const [selectedDuration, setSelectedDuration] = useState('1h');
 
   const activeDate = weekDays[activeDay];
-  const activeDateStr = activeDate.toISOString().split('T')[0];
+  // Use local date string to avoid UTC-offset shifting the date
+  const activeDateStr = toLocalDateStr(activeDate);
 
   // Tasks scheduled on active day
   const scheduledTasks = state.tasks.filter(t => t.scheduledDate === activeDateStr && t.scheduledTime);
@@ -65,13 +61,16 @@ export default function CalendarPage() {
     });
   }
 
+  // Month/year label for topbar
+  const monthLabel = activeDate.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' });
+
   return (
     <div className="pb-4">
       {/* TOPBAR */}
       <div className="topbar">
         <div>
           <div className="topbar-title">🗓️ Calendar</div>
-          <div className="topbar-sub">May 2026</div>
+          <div className="topbar-sub">{monthLabel}</div>
         </div>
         <button
           onClick={() => setPanelOpen(p => !p)}
@@ -83,11 +82,11 @@ export default function CalendarPage() {
 
       <GoalBanner compact />
 
-      {/* WEEK STRIP — shared component */}
+      {/* WEEK STRIP — shared component, uses local date strings for event dots */}
       <WeekStrip
         activeIndex={activeDay}
         onDaySelect={setActiveDay}
-        eventDots={weekDays.map(d => state.tasks.some(t => t.scheduledDate === d.toISOString().split('T')[0]))}
+        eventDots={weekDays.map(d => state.tasks.some(t => t.scheduledDate === toLocalDateStr(d)))}
       />
 
       {/* MAIN LAYOUT: Calendar + Import Panel side by side on desktop */}
