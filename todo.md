@@ -24,3 +24,9 @@
 - [x] Migrated mobile data (userId=150007) to shared workspace owner (userId=1)
 - [x] Fixed Board.tsx: showCheckin now waits for `loading=false` before deciding, and respects in-session dismissal
 - [ ] User republishes to deploy the fix
+
+## Email Allowlist (private dashboard for tuhuiyu@manus.ai + t.reneehuiyu@gmail.com)
+- [x] Add ALLOWED_EMAILS env-driven allowlist middleware in server/_core/trpc.ts
+- [x] Update workspaceProcedure to chain requireUser → requireAllowedEmail → requireWorkspace
+- [x] Update tests to use an allowlisted email (all 18 pass)
+- [ ] User republishes to apply allowlist + the modal fix on production

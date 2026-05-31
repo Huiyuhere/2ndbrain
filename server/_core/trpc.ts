@@ -39,8 +39,21 @@ const requireWorkspace = t.middleware(async opts => {
   return next({ ctx: { ...ctx, workspaceOwnerId: ctx.workspaceOwnerId } });
 });
 
-/** Use this for all data procedures — requires auth AND workspace to be resolved */
-export const workspaceProcedure = t.procedure.use(requireUser).use(requireWorkspace);
+/** Email allowlist for accessing the dashboard. */
+const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS ?? "tuhuiyu@manus.ai,t.reneehuiyu@gmail.com")
+  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+
+const requireAllowedEmail = t.middleware(async opts => {
+  const { ctx, next } = opts;
+  const email = ctx.user?.email?.toLowerCase();
+  if (!email || !ALLOWED_EMAILS.includes(email)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Access denied. This dashboard is private." });
+  }
+  return next({ ctx });
+});
+
+/** Use this for all data procedures — requires auth, allowlisted email, and workspace owner resolved. */
+export const workspaceProcedure = t.procedure.use(requireUser).use(requireAllowedEmail).use(requireWorkspace);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {

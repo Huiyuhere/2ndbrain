@@ -53,7 +53,7 @@ function createAuthContext(): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, // signed-in user (could be anyone)
     openId: "test-user",
-    email: "test@example.com",
+    email: "tuhuiyu@manus.ai",
     name: "Test User",
     loginMethod: "manus",
     role: "user",
