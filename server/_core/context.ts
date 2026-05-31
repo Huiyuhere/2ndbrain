@@ -16,16 +16,27 @@ let _cachedWorkspaceOwnerId: number | null = null;
 let _cacheResolvedAt = 0;
 const CACHE_TTL_MS = 60_000; // retry every 60s until owner row exists
 
-async function getWorkspaceOwnerId(): Promise<number | null> {
-  const now = Date.now();
-  // Return cached value if it's a valid ID, or if we checked recently
+/** Hardcoded workspace owner ID. The DB has a single shared workspace under userId=1. */
+const HARDCODED_OWNER_ID = 1;
+
+async function getWorkspaceOwnerId(): Promise<number> {
   if (_cachedWorkspaceOwnerId !== null) return _cachedWorkspaceOwnerId;
-  if (now - _cacheResolvedAt < CACHE_TTL_MS) return null;
-  if (!ENV.ownerOpenId) return null;
-  const owner = await getUserByOpenId(ENV.ownerOpenId);
-  _cachedWorkspaceOwnerId = owner?.id ?? null;
-  _cacheResolvedAt = now;
-  return _cachedWorkspaceOwnerId;
+  const now = Date.now();
+  // Try resolving from env (in case the owner row uses a different ID), but fall back to hardcoded.
+  if (ENV.ownerOpenId && now - _cacheResolvedAt >= CACHE_TTL_MS) {
+    try {
+      const owner = await getUserByOpenId(ENV.ownerOpenId);
+      if (owner?.id) {
+        _cachedWorkspaceOwnerId = owner.id;
+        _cacheResolvedAt = now;
+        return _cachedWorkspaceOwnerId;
+      }
+    } catch {
+      /* fall through to hardcoded */
+    }
+    _cacheResolvedAt = now;
+  }
+  return HARDCODED_OWNER_ID;
 }
 
 export async function createContext(

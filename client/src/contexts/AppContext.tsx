@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/_core/hooks/useAuth';
 import {
   AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection,
   Category, RoadmapProject, UserProfile,
   getTodayString, autoClassify, getStreak,
 } from '@/lib/store';
 import { nanoid } from 'nanoid';
-import { getLoginUrl } from '@/const';
 
 // ─── Default data (used when user has no DB data yet) ─────────────────────────
 
@@ -73,7 +71,6 @@ const AppContext = createContext<AppContextType | null>(null);
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<AppState>(buildDefaultState);
   const [dbLoading, setDbLoading] = useState(true);
   const seededRef = useRef(false);
@@ -94,15 +91,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setAllCategories = trpc.categories.setAll.useMutation();
   const updateProfileMut = trpc.profile.update.useMutation();
 
-  // ── Load all data from DB once user is authenticated ──────────────────────
+  // ── Load all data from DB on mount (public dashboard — no auth gate) ────────
   const loadAll = trpc.sync.loadAll.useQuery(undefined, {
-    enabled: !!user,
     refetchOnWindowFocus: false,
     retry: false,
   });
 
   useEffect(() => {
-    if (!user || loadAll.isLoading) return;
+    if (loadAll.isLoading) return;
     if (loadAll.error) { setDbLoading(false); return; }
     if (!loadAll.data) return;
     if (seededRef.current) return;
@@ -184,7 +180,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setState({
       userProfile: {
-        name: profile?.name ?? user.name ?? '',
+        name: profile?.name ?? '',
         bio: profile?.bio ?? '',
         avatarUrl: profile?.avatarUrl ?? '',
       },
@@ -214,19 +210,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     seededRef.current = true;
     setDbLoading(false);
-  }, [user, loadAll.data, loadAll.isLoading, loadAll.error]);
-
-  // When not logged in, stop loading
-  useEffect(() => {
-    if (!authLoading && !user) setDbLoading(false);
-  }, [authLoading, user]);
+  }, [loadAll.data, loadAll.isLoading, loadAll.error]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const setFocusMode = useCallback((mode: AppState['focusMode']) => {
     setState(s => ({ ...s, focusMode: mode }));
-    if (user) updateProfileMut.mutate({ focusMode: mode });
-  }, [user]);
+    updateProfileMut.mutate({ focusMode: mode });
+  }, []);
 
   const addTask = useCallback((task: Omit<Task, 'id' | 'createdAt'>): Task => {
     const newTask: Task = {
@@ -236,23 +227,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       categoryId: task.categoryId || autoClassify(task.title, state.categories),
     };
     setState(s => ({ ...s, tasks: [...s.tasks, newTask] }));
-    if (user) upsertTask.mutate(newTask);
+    upsertTask.mutate(newTask);
     return newTask;
-  }, [state.categories, user]);
+  }, [state.categories]);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     setState(s => {
       const updated = s.tasks.map(t => t.id === id ? { ...t, ...updates } : t);
       const task = updated.find(t => t.id === id);
-      if (user && task) upsertTask.mutate(task);
+      if (task) upsertTask.mutate(task);
       return { ...s, tasks: updated };
     });
-  }, [user]);
+  }, []);
 
   const deleteTask = useCallback((id: string) => {
     setState(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id) }));
-    if (user) deleteTaskMut.mutate({ id });
-  }, [user]);
+    deleteTaskMut.mutate({ id });
+  }, []);
 
   const moveTask = useCallback((id: string, column: Task['column']) => {
     setState(s => {
@@ -260,10 +251,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? { ...t, column, completedAt: column === 'done' ? getTodayString() : t.completedAt }
         : t);
       const task = updated.find(t => t.id === id);
-      if (user && task) upsertTask.mutate(task);
+      if (task) upsertTask.mutate(task);
       return { ...s, tasks: updated };
     });
-  }, [user]);
+  }, []);
 
   const toggleHabit = useCallback((habitId: string, date: string) => {
     setState(s => ({
@@ -279,8 +270,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         };
       }),
     }));
-    if (user) toggleHabitMut.mutate({ habitId, date });
-  }, [user]);
+    toggleHabitMut.mutate({ habitId, date });
+  }, []);
 
   const saveMoodEntry = useCallback((entry: MoodEntry) => {
     setState(s => ({
@@ -288,16 +279,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       moodEntries: [...s.moodEntries.filter(e => e.date !== entry.date), entry],
       checkinDone: entry.date === getTodayString() ? true : s.checkinDone,
     }));
-    if (user) saveMood.mutate(entry);
-  }, [user]);
+    saveMood.mutate(entry);
+  }, []);
 
   const saveEveningEntry = useCallback((entry: EveningEntry) => {
     setState(s => ({
       ...s,
       eveningEntries: [...s.eveningEntries.filter(e => e.date !== entry.date), entry],
     }));
-    if (user) saveEvening.mutate(entry);
-  }, [user]);
+    saveEvening.mutate(entry);
+  }, []);
 
   const saveReflection = useCallback((reflection: Omit<Reflection, 'id'>) => {
     const full: Reflection = { ...reflection, id: nanoid() };
@@ -305,17 +296,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...s,
       reflections: [...s.reflections.filter(r => !(r.type === reflection.type && r.date === reflection.date)), full],
     }));
-    if (user) saveRefl.mutate(full);
-  }, [user]);
+    saveRefl.mutate(full);
+  }, []);
 
   const updateGoal = useCallback((id: string, updates: Partial<Goal>) => {
     setState(s => {
       const updated = s.goals.map(g => g.id === id ? { ...g, ...updates } : g);
       const goal = updated.find(g => g.id === id);
-      if (user && goal) upsertGoal.mutate(goal);
+      if (goal) upsertGoal.mutate(goal);
       return { ...s, goals: updated };
     });
-  }, [user]);
+  }, []);
 
   const markCheckinDone = useCallback(() => {
     setState(s => ({ ...s, checkinDone: true }));
@@ -323,77 +314,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateCategories = useCallback((cats: Category[]) => {
     setState(s => ({ ...s, categories: cats }));
-    if (user) setAllCategories.mutate(cats);
-  }, [user]);
+    setAllCategories.mutate(cats);
+  }, []);
 
   const updateQuarterlyGoal = useCallback((updates: Partial<AppState['quarterlyGoal']>) => {
     setState(s => {
       const updated = { ...s.quarterlyGoal, ...updates };
-      if (user) updateProfileMut.mutate({
+      updateProfileMut.mutate({
         quarterlyGoalText: updated.text,
         quarterlyGoalProgress: updated.progress,
       });
       return { ...s, quarterlyGoal: updated };
     });
-  }, [user]);
+  }, []);
 
   const addHabit = useCallback((habit: Omit<Habit, 'id' | 'completedDates'>) => {
     const newHabit: Habit = { ...habit, id: nanoid(), completedDates: [] };
     setState(s => ({ ...s, habits: [...s.habits, newHabit] }));
-    if (user) upsertHabit.mutate({ id: newHabit.id, name: newHabit.name, emoji: newHabit.emoji });
-  }, [user]);
+    upsertHabit.mutate({ id: newHabit.id, name: newHabit.name, emoji: newHabit.emoji });
+  }, []);
 
   const deleteHabit = useCallback((id: string) => {
     setState(s => ({ ...s, habits: s.habits.filter(h => h.id !== id) }));
-    if (user) deleteHabitMut.mutate({ id });
-  }, [user]);
+    deleteHabitMut.mutate({ id });
+  }, []);
 
   const addGoal = useCallback((goal: Omit<Goal, 'id'>) => {
     const newGoal: Goal = { ...goal, id: nanoid() };
     setState(s => ({ ...s, goals: [...s.goals, newGoal] }));
-    if (user) upsertGoal.mutate(newGoal);
-  }, [user]);
+    upsertGoal.mutate(newGoal);
+  }, []);
 
   const deleteGoal = useCallback((id: string) => {
     setState(s => ({ ...s, goals: s.goals.filter(g => g.id !== id) }));
-    if (user) deleteGoalMut.mutate({ id });
-  }, [user]);
+    deleteGoalMut.mutate({ id });
+  }, []);
 
   const addProject = useCallback((project: Omit<RoadmapProject, 'id'>) => {
     const newProject: RoadmapProject = { ...project, id: nanoid() };
     setState(s => ({ ...s, roadmapProjects: [...(s.roadmapProjects || []), newProject] }));
-    if (user) upsertProject.mutate(newProject);
-  }, [user]);
+    upsertProject.mutate(newProject);
+  }, []);
 
   const updateProject = useCallback((id: string, updates: Partial<RoadmapProject>) => {
     setState(s => {
       const updated = (s.roadmapProjects || []).map(p => p.id === id ? { ...p, ...updates } : p);
       const project = updated.find(p => p.id === id);
-      if (user && project) upsertProject.mutate(project);
+      if (project) upsertProject.mutate(project);
       return { ...s, roadmapProjects: updated };
     });
-  }, [user]);
+  }, []);
 
   const deleteProject = useCallback((id: string) => {
     setState(s => ({ ...s, roadmapProjects: (s.roadmapProjects || []).filter(p => p.id !== id) }));
-    if (user) deleteProjectMut.mutate({ id });
-  }, [user]);
+    deleteProjectMut.mutate({ id });
+  }, []);
 
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
     setState(s => ({ ...s, userProfile: { ...s.userProfile, ...updates } }));
-    if (user) updateProfileMut.mutate({
+    updateProfileMut.mutate({
       name: updates.name,
       bio: updates.bio,
       avatarUrl: updates.avatarUrl,
     });
-  }, [user]);
+  }, []);
 
   const updateMonthlyIntention = useCallback((text: string) => {
     setState(s => ({ ...s, monthlyIntention: text }));
-    if (user) updateProfileMut.mutate({ monthlyIntention: text });
-  }, [user]);
+    updateProfileMut.mutate({ monthlyIntention: text });
+  }, []);
 
-  const loading = authLoading || (!!user && dbLoading);
+  const loading = dbLoading;
 
   return (
     <AppContext.Provider value={{

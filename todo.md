@@ -30,3 +30,13 @@
 - [x] Update workspaceProcedure to chain requireUser → requireAllowedEmail → requireWorkspace
 - [x] Update tests to use an allowlisted email (all 18 pass)
 - [ ] User republishes to apply allowlist + the modal fix on production
+
+## Fully Public Dashboard (no auth at all) - COMPLETED
+- [x] Server: workspaceProcedure is now public (no auth required)
+- [x] Server: hardcoded workspaceOwnerId=1 fallback in context
+- [x] Client: removed login gate from App.tsx
+- [x] Client: removed useAuth dependency from AppContext, data loads on mount
+- [x] Client: removed all `if (user)` gates from mutations
+- [x] All 18 vitest tests pass
+- [x] Dev preview verified: dashboard loads with data, no login, no modal
+- [ ] User republishes to deploy the public dashboard
