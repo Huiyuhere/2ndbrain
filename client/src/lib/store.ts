@@ -82,6 +82,9 @@ export type RoadmapProject = {
   endMonth: number;
   progress: number; // 0-100
   milestones: { month: number; label: string }[];
+  goalType?: 'numerical' | 'milestone'; // default: milestone
+  targetValue?: number; // for numerical goals (e.g. 5000)
+  currentValue?: number; // for numerical goals (e.g. 2400)
 };
 
 export type AppState = {

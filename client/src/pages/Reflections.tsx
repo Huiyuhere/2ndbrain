@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,7 +35,7 @@ const PROMPTS_MAP = { weekly: WEEKLY_PROMPTS, monthly: MONTHLY_PROMPTS, quarterl
 
 const TAB_LABELS: Record<Tab, string> = { weekly: '📋 Weekly', monthly: '🌙 Monthly', quarterly: '👑 Quarterly' };
 
-const TODAY = '2026-05-31';
+const TODAY = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -48,11 +48,16 @@ function getFirstAnswer(answers: Record<string, string>): string {
 }
 
 export default function Reflections() {
-  const { state, saveReflection } = useApp();
+  const { state, saveReflection, updateMonthlyIntention } = useApp();
   const [tab, setTab] = useState<Tab>('weekly');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [expandedPast, setExpandedPast] = useState<string | null>(null);
+  const [editingIntention, setEditingIntention] = useState(false);
+  const [intentionText, setIntentionText] = useState(state.monthlyIntention || '');
+
+  // Keep local intention in sync with context
+  useEffect(() => { setIntentionText(state.monthlyIntention || ''); }, [state.monthlyIntention]);
 
   const prompts = PROMPTS_MAP[tab];
 
@@ -109,16 +114,48 @@ export default function Reflections() {
 
       {/* CONTEXT CARD */}
       <div className="mx-4 mb-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
-        <p className="text-xs text-[var(--muted-foreground)] font-semibold uppercase tracking-wider mb-1">
-          {tab === 'weekly' ? '📅 Week of 25–31 May 2026' : tab === 'monthly' ? '🗓️ May 2026' : '📊 Q2 2026 · Apr–Jun'}
-        </p>
-        <p className="text-sm text-[var(--foreground)] leading-relaxed font-['Playfair_Display'] italic">
-          {tab === 'weekly'
-            ? '"The secret is to work less as individuals and more as a team."'
-            : tab === 'monthly'
-            ? 'May intention: Build the Type platform MVP and hit 100 sign-ups.'
-            : '"Build a million dollar empire. One brick at a time."'}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-xs text-[var(--muted-foreground)] font-semibold uppercase tracking-wider mb-1">
+            {tab === 'weekly' ? `📅 Week of ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}` : tab === 'monthly' ? `🗓️ ${new Date().toLocaleDateString('en-SG', { month: 'long', year: 'numeric' })}` : '📊 Q2 2026 · Apr–Jun'}
+          </p>
+          {tab === 'monthly' && (
+            <button
+              onClick={() => {
+                if (editingIntention) { updateMonthlyIntention(intentionText); toast.success('Intention saved!'); }
+                setEditingIntention(e => !e);
+              }}
+              className="text-xs text-[var(--sky)] font-semibold shrink-0 flex items-center gap-1"
+            >
+              {editingIntention ? (
+                <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Save</>
+              ) : (
+                <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</>
+              )}
+            </button>
+          )}
+        </div>
+        {tab === 'monthly' ? (
+          editingIntention ? (
+            <textarea
+              className="input-field resize-none mt-1"
+              rows={2}
+              placeholder="Set your monthly intention..."
+              value={intentionText}
+              onChange={e => setIntentionText(e.target.value)}
+              autoFocus
+            />
+          ) : (
+            <p className="text-sm text-[var(--foreground)] leading-relaxed font-['Playfair_Display'] italic">
+              {intentionText || <span className="text-[var(--muted-foreground)]">Tap Edit to set your monthly intention.</span>}
+            </p>
+          )
+        ) : (
+          <p className="text-sm text-[var(--foreground)] leading-relaxed font-['Playfair_Display'] italic">
+            {tab === 'weekly'
+              ? '"The secret is to work less as individuals and more as a team."'
+              : '"Build a million dollar empire. One brick at a time."'}
+          </p>
+        )}
       </div>
 
       {/* TODAY'S REFLECTION FORM or SAVED CARD */}

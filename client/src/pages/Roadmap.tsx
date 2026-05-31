@@ -1,3 +1,6 @@
+// 2nd Brain — Roadmap page
+// Design: clean Gantt chart, Q2 tab first (default), full project names, numerical/milestone goal types
+
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { RoadmapProject } from '@/lib/store';
@@ -17,14 +20,21 @@ type ProjectForm = {
   startMonth: number;
   endMonth: number;
   progress: number;
+  goalType: 'numerical' | 'milestone';
+  targetValue: string;
+  currentValue: string;
 };
 
-const EMPTY_FORM: ProjectForm = { name: '', emoji: '🚀', color: '#2E86C1', startMonth: 0, endMonth: 5, progress: 0 };
+const EMPTY_FORM: ProjectForm = {
+  name: '', emoji: '🚀', color: '#2E86C1',
+  startMonth: 0, endMonth: 5, progress: 0,
+  goalType: 'milestone', targetValue: '', currentValue: '',
+};
 
 export default function Roadmap() {
   const { state, addProject, updateProject, deleteProject } = useApp();
   const projects = state.roadmapProjects || [];
-  const [view, setView] = useState<'year' | 'q'>('q');
+  const [view, setView] = useState<'q' | 'year'>('q');
 
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<ProjectForm>(EMPTY_FORM);
@@ -58,9 +68,27 @@ export default function Roadmap() {
   const todayLeft = `${((TODAY_MONTH - startOffset + 0.5) / totalMonths) * 100}%`;
   const todayVisible = TODAY_MONTH >= startOffset && TODAY_MONTH < startOffset + totalMonths;
 
+  function computeProgress(f: ProjectForm): number {
+    if (f.goalType === 'numerical') {
+      const cur = parseFloat(f.currentValue.replace(/[^0-9.]/g, ''));
+      const tgt = parseFloat(f.targetValue.replace(/[^0-9.]/g, ''));
+      if (!isNaN(cur) && !isNaN(tgt) && tgt > 0) return Math.min(100, Math.round((cur / tgt) * 100));
+    }
+    return f.progress;
+  }
+
   function handleAdd() {
     if (!form.name.trim()) return;
-    addProject({ ...form, name: form.name.trim(), milestones: [] });
+    const progress = computeProgress(form);
+    addProject({
+      ...form,
+      name: form.name.trim(),
+      milestones: [],
+      progress,
+      goalType: form.goalType,
+      targetValue: form.goalType === 'numerical' ? parseFloat(form.targetValue.replace(/[^0-9.]/g, '')) || undefined : undefined,
+      currentValue: form.goalType === 'numerical' ? parseFloat(form.currentValue.replace(/[^0-9.]/g, '')) || undefined : undefined,
+    });
     toast.success(`Project "${form.name.trim()}" added!`);
     setAddOpen(false);
     setForm(EMPTY_FORM);
@@ -68,12 +96,26 @@ export default function Roadmap() {
 
   function openEdit(p: RoadmapProject) {
     setEditId(p.id);
-    setEditForm({ name: p.name, emoji: p.emoji, color: p.color, startMonth: p.startMonth, endMonth: p.endMonth, progress: p.progress });
+    setEditForm({
+      name: p.name, emoji: p.emoji, color: p.color,
+      startMonth: p.startMonth, endMonth: p.endMonth, progress: p.progress,
+      goalType: p.goalType || 'milestone',
+      targetValue: p.targetValue !== undefined ? String(p.targetValue) : '',
+      currentValue: p.currentValue !== undefined ? String(p.currentValue) : '',
+    });
   }
 
   function handleEdit() {
     if (!editId || !editForm.name.trim()) return;
-    updateProject(editId, { ...editForm, name: editForm.name.trim() });
+    const progress = computeProgress(editForm);
+    updateProject(editId, {
+      ...editForm,
+      name: editForm.name.trim(),
+      progress,
+      goalType: editForm.goalType,
+      targetValue: editForm.goalType === 'numerical' ? parseFloat(editForm.targetValue.replace(/[^0-9.]/g, '')) || undefined : undefined,
+      currentValue: editForm.goalType === 'numerical' ? parseFloat(editForm.currentValue.replace(/[^0-9.]/g, '')) || undefined : undefined,
+    });
     toast.success('Project updated!');
     setEditId(null);
   }
@@ -85,6 +127,12 @@ export default function Roadmap() {
     toast.success(`Project "${p?.name}" deleted`);
     setDeleteId(null);
   }
+
+  const upcomingMilestones = projects
+    .flatMap(p => p.milestones.map(m => ({ ...m, project: p })))
+    .filter(m => m.month >= TODAY_MONTH)
+    .sort((a, b) => a.month - b.month)
+    .slice(0, 5);
 
   return (
     <div className="pb-4">
@@ -105,11 +153,12 @@ export default function Roadmap() {
         </div>
       </div>
 
-      {/* GANTT CHART — light background */}
+      {/* GANTT CHART */}
       <div className="mx-4 mt-2 bg-white rounded-2xl border border-[var(--border)] overflow-hidden">
         {/* Month headers */}
         <div className="flex border-b border-[var(--border)] bg-[var(--muted)]">
-          <div className="w-28 shrink-0 px-3 py-2 text-[10px] font-bold text-[var(--muted-foreground)] uppercase">Project</div>
+          {/* Wider project column so full name shows */}
+          <div className="w-36 shrink-0 px-3 py-2 text-[10px] font-bold text-[var(--muted-foreground)] uppercase">Project</div>
           <div className="flex-1 flex">
             {visibleMonths.map((m, i) => {
               const absMonth = i + startOffset;
@@ -124,23 +173,27 @@ export default function Roadmap() {
               );
             })}
           </div>
-          {/* Edit col header */}
           <div className="w-16 shrink-0" />
         </div>
 
         {/* Project rows */}
         {projects.map(p => {
           const barStyle = getBarStyle(p);
+          const isNumerical = p.goalType === 'numerical' && p.targetValue !== undefined;
+          const displayProgress = isNumerical
+            ? `${p.currentValue ?? 0} / ${p.targetValue}`
+            : `${p.progress}%`;
           return (
             <div key={p.id} className="flex items-center border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/30 transition-colors">
-              <div className="w-28 shrink-0 px-3 py-3 flex items-center gap-2">
-                <span className="text-base">{p.emoji}</span>
+              {/* Wider name column, allow text wrap, no truncate */}
+              <div className="w-36 shrink-0 px-3 py-3 flex items-start gap-2">
+                <span className="text-base mt-0.5 shrink-0">{p.emoji}</span>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-[var(--foreground)] truncate">{p.name}</p>
-                  <p className="text-[10px] text-[var(--muted-foreground)]">{p.progress}%</p>
+                  <p className="text-xs font-semibold text-[var(--foreground)] leading-snug break-words">{p.name}</p>
+                  <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">{displayProgress}</p>
                 </div>
               </div>
-              <div className="flex-1 relative py-3 pr-2" style={{ height: '52px' }}>
+              <div className="flex-1 relative py-3 pr-2" style={{ minHeight: '52px' }}>
                 {/* Today line */}
                 {todayVisible && (
                   <div className="absolute top-0 bottom-0 w-px bg-[var(--sky)] z-10 opacity-60" style={{ left: todayLeft }} />
@@ -203,26 +256,27 @@ export default function Roadmap() {
       </div>
 
       {/* UPCOMING MILESTONES */}
-      <div className="section-hdr mt-4">
-        <div className="section-hdr-title">⭐ Upcoming Milestones</div>
-      </div>
-      <div className="px-4 space-y-2">
-        {projects.flatMap(p => p.milestones.map(m => ({ ...m, project: p }))).filter(m => m.month >= TODAY_MONTH).sort((a, b) => a.month - b.month).slice(0, 4).map((m, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[var(--border)]">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ background: m.project.color + '20' }}>
-              {m.project.emoji}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-[var(--foreground)]">{m.label}</p>
-              <p className="text-xs text-[var(--muted-foreground)]">{m.project.name} · {MONTHS[m.month]} 2026</p>
-            </div>
-            <div className="w-2 h-2 rotate-45 rounded-sm" style={{ background: '#F0B429' }} />
+      {upcomingMilestones.length > 0 && (
+        <>
+          <div className="section-hdr mt-4">
+            <div className="section-hdr-title">⭐ Upcoming Milestones</div>
           </div>
-        ))}
-        {projects.flatMap(p => p.milestones).filter(m => m.month >= TODAY_MONTH).length === 0 && (
-          <p className="text-sm text-[var(--muted-foreground)] text-center py-4">No upcoming milestones</p>
-        )}
-      </div>
+          <div className="px-4 space-y-2">
+            {upcomingMilestones.map((m, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[var(--border)]">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ background: m.project.color + '20' }}>
+                  {m.project.emoji}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">{m.label}</p>
+                  <p className="text-xs text-[var(--muted-foreground)]">{m.project.name} · {MONTHS[m.month]} 2026</p>
+                </div>
+                <div className="w-2 h-2 rotate-45 rounded-sm" style={{ background: '#F0B429' }} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* ADD PROJECT MODAL */}
       {addOpen && (
@@ -275,9 +329,14 @@ function ProjectModal({ title, form, setForm, onSave, onClose, saveLabel }: {
   onClose: () => void;
   saveLabel: string;
 }) {
-  const EMOJI_OPTIONS = ['💎','📱','🌐','🧠','🚀','🎯','📚','💪','🎨','🌿','💰','🏆'];
-  const COLOR_OPTIONS = ['#2E86C1','#F0B429','#4A7C59','#C4A882','#C0392B','#6B5EA8','#2E8B57','#E67E22'];
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const numericalProgress = (() => {
+    if (form.goalType !== 'numerical') return null;
+    const cur = parseFloat(form.currentValue.replace(/[^0-9.]/g, ''));
+    const tgt = parseFloat(form.targetValue.replace(/[^0-9.]/g, ''));
+    if (!isNaN(cur) && !isNaN(tgt) && tgt > 0) return Math.min(100, Math.round((cur / tgt) * 100));
+    return null;
+  })();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -322,7 +381,7 @@ function ProjectModal({ title, form, setForm, onSave, onClose, saveLabel }: {
         </div>
 
         {/* Start / End month */}
-        <div className="flex gap-3 mb-3">
+        <div className="flex gap-3 mb-4">
           <div className="flex-1">
             <p className="text-sm font-semibold mb-1">Start month</p>
             <select
@@ -345,15 +404,69 @@ function ProjectModal({ title, form, setForm, onSave, onClose, saveLabel }: {
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="mb-6">
-          <p className="text-sm font-semibold mb-1">Progress: {form.progress}%</p>
-          <input
-            type="range" min={0} max={100} value={form.progress}
-            onChange={e => setForm(f => ({ ...f, progress: Number(e.target.value) }))}
-            className="w-full accent-[#2E86C1]"
-          />
+        {/* Goal type toggle */}
+        <div className="mb-4">
+          <p className="text-sm font-semibold mb-2">Goal type</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setForm(f => ({ ...f, goalType: 'milestone' }))}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${form.goalType === 'milestone' ? 'border-[var(--sky)] bg-[var(--sky-mist)] text-[var(--sky)]' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
+            >
+              🏔️ Milestone
+            </button>
+            <button
+              onClick={() => setForm(f => ({ ...f, goalType: 'numerical' }))}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${form.goalType === 'numerical' ? 'border-[var(--sky)] bg-[var(--sky-mist)] text-[var(--sky)]' : 'border-[var(--border)] text-[var(--muted-foreground)]'}`}
+            >
+              🔢 Numerical
+            </button>
+          </div>
         </div>
+
+        {/* Numerical fields */}
+        {form.goalType === 'numerical' && (
+          <div className="mb-4 p-4 rounded-xl bg-[var(--muted)]/40 border border-[var(--border)]">
+            <div className="flex gap-3 mb-3">
+              <div className="flex-1">
+                <p className="text-sm font-semibold mb-1">Current value</p>
+                <input
+                  className="input-field"
+                  placeholder="e.g. 2400"
+                  value={form.currentValue}
+                  onChange={e => setForm(f => ({ ...f, currentValue: e.target.value }))}
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold mb-1">Target value</p>
+                <input
+                  className="input-field"
+                  placeholder="e.g. 5000"
+                  value={form.targetValue}
+                  onChange={e => setForm(f => ({ ...f, targetValue: e.target.value }))}
+                />
+              </div>
+            </div>
+            {numericalProgress !== null && (
+              <p className="text-xs text-[var(--sky)] font-semibold">
+                Auto-calculated progress: {numericalProgress}%
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Milestone progress slider */}
+        {form.goalType === 'milestone' && (
+          <div className="mb-6">
+            <p className="text-sm font-semibold mb-1">Progress: {form.progress}%</p>
+            <input
+              type="range" min={0} max={100} value={form.progress}
+              onChange={e => setForm(f => ({ ...f, progress: Number(e.target.value) }))}
+              className="w-full accent-[#2E86C1]"
+            />
+          </div>
+        )}
+
+        {form.goalType === 'numerical' && <div className="mb-2" />}
 
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-3 rounded-2xl text-sm font-semibold border border-[var(--border)] text-[var(--muted-foreground)]">Cancel</button>

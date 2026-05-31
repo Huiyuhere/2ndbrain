@@ -1,44 +1,35 @@
-import { useState, useEffect } from 'react';
+// 2nd Brain — Goals page
+// Goals are binary: checked (done) or unchecked. No progress bars.
+// Monthly intention lives in /reflections.
+
+import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Goal } from '@/lib/store';
 import { toast } from 'sonner';
 import BackButton from '@/components/BackButton';
 
 const EMOJI_OPTIONS = ['🎯','🚀','📱','📚','💪','🌐','🧠','💡','🏆','🎨','🌿','💰','🏃','✍️','🎵'];
-const COLOR_OPTIONS = ['#2E86C1','#F0B429','#4A7C59','#C4A882','#C0392B','#6B5EA8','#2E8B57','#E67E22'];
 
-type GoalForm = { title: string; emoji: string; target: string; current: string; progress: number };
-const EMPTY_FORM: GoalForm = { title: '', emoji: '🎯', target: '', current: '', progress: 0 };
+type GoalForm = { title: string; emoji: string };
+const EMPTY_FORM: GoalForm = { title: '', emoji: '🎯' };
 
 export default function Goals() {
-  const { state, updateQuarterlyGoal, addGoal, updateGoal, deleteGoal, updateMonthlyIntention } = useApp();
-  const monthlyIntention = state.monthlyIntention || 'Build the Type platform MVP and hit 100 sign-ups.';
-  const [editingMonthly, setEditingMonthly] = useState(false);
-  const [localMonthly, setLocalMonthly] = useState(monthlyIntention);
+  const { state, updateQuarterlyGoal, addGoal, updateGoal, deleteGoal } = useApp();
   const [editingQGoal, setEditingQGoal] = useState(false);
   const [qGoalText, setQGoalText] = useState(state.quarterlyGoal.text);
   const [qProgress, setQProgress] = useState(state.quarterlyGoal.progress);
 
-  // Add modal
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<GoalForm>(EMPTY_FORM);
 
-  // Edit modal
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<GoalForm>(EMPTY_FORM);
 
-  // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   function handleAdd() {
     if (!form.title.trim()) return;
-    addGoal({
-      title: form.title.trim(),
-      categoryId: 'work',
-      progress: form.progress,
-      target: form.target || undefined,
-      current: form.current || undefined,
-    });
+    addGoal({ title: form.title.trim(), categoryId: 'work', progress: 0 });
     toast.success(`Goal "${form.title.trim()}" added!`);
     setAddOpen(false);
     setForm(EMPTY_FORM);
@@ -46,17 +37,12 @@ export default function Goals() {
 
   function openEdit(g: Goal) {
     setEditId(g.id);
-    setEditForm({ title: g.title, emoji: '🎯', target: g.target || '', current: g.current || '', progress: g.progress });
+    setEditForm({ title: g.title, emoji: '🎯' });
   }
 
   function handleEdit() {
     if (!editId || !editForm.title.trim()) return;
-    updateGoal(editId, {
-      title: editForm.title.trim(),
-      progress: editForm.progress,
-      target: editForm.target || undefined,
-      current: editForm.current || undefined,
-    });
+    updateGoal(editId, { title: editForm.title.trim() });
     toast.success('Goal updated!');
     setEditId(null);
   }
@@ -69,11 +55,19 @@ export default function Goals() {
     setDeleteId(null);
   }
 
+  function toggleGoal(g: Goal) {
+    // progress 100 = done, 0 = not done
+    updateGoal(g.id, { progress: g.progress >= 100 ? 0 : 100 });
+  }
+
   function saveQGoal() {
     updateQuarterlyGoal({ text: qGoalText, progress: qProgress });
     setEditingQGoal(false);
     toast.success('Q2 goal updated!');
   }
+
+  const done = state.goals.filter(g => g.progress >= 100);
+  const pending = state.goals.filter(g => g.progress < 100);
 
   return (
     <div className="pb-4">
@@ -114,9 +108,13 @@ export default function Goals() {
           </div>
           <button
             onClick={() => editingQGoal ? saveQGoal() : setEditingQGoal(true)}
-            className="text-white/70 hover:text-white text-xs shrink-0 mt-1 transition-colors"
+            className="text-white/70 hover:text-white shrink-0 mt-1 transition-colors w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10"
           >
-            {editingQGoal ? '✓ Save' : '✏️'}
+            {editingQGoal ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            )}
           </button>
         </div>
         <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden mb-2">
@@ -128,87 +126,43 @@ export default function Goals() {
         </div>
       </div>
 
-      {/* MONTHLY INTENTION */}
-      <div className="mx-4 mt-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-[var(--foreground)]">🌙 May Intention</p>
-          <button
-            onClick={() => {
-              if (editingMonthly) { updateMonthlyIntention(localMonthly); toast.success('Intention saved!'); }
-              else { setLocalMonthly(monthlyIntention); }
-              setEditingMonthly(e => !e);
-            }}
-            className="text-xs text-[var(--sky)] font-medium"
-          >
-            {editingMonthly ? '✓ Save' : '✏️ Edit'}
-          </button>
-        </div>
-        {editingMonthly ? (
-          <textarea
-            className="input-field resize-none"
-            rows={2}
-            value={localMonthly}
-            onChange={e => setLocalMonthly(e.target.value)}
-          />
-        ) : (
-          <p className="text-sm text-[var(--foreground)] font-['Playfair_Display'] italic leading-relaxed">{monthlyIntention}</p>
+      {/* PENDING GOALS */}
+      <div className="section-hdr mt-4">
+        <div className="section-hdr-title">🎯 Goals</div>
+        <span className="section-hdr-action cursor-pointer" onClick={() => setAddOpen(true)}>+ Add</span>
+      </div>
+      <div className="px-4 space-y-2">
+        {pending.map(g => (
+          <GoalRow key={g.id} g={g} onToggle={() => toggleGoal(g)} onEdit={() => openEdit(g)} onDelete={() => setDeleteId(g.id)} />
+        ))}
+        {pending.length === 0 && (
+          <div className="text-center py-6 text-[var(--muted-foreground)]">
+            <p className="text-2xl mb-1">🎯</p>
+            <p className="text-sm">All goals completed! Add a new one.</p>
+          </div>
         )}
       </div>
 
-      {/* CUSTOM GOALS */}
-      <div className="section-hdr mt-4">
-        <div className="section-hdr-title">🎯 Custom Goals</div>
-        <span className="section-hdr-action cursor-pointer" onClick={() => setAddOpen(true)}>+ Add</span>
-      </div>
-      <div className="px-4 space-y-3">
-        {state.goals.map(g => (
-          <div key={g.id} className="p-4 rounded-2xl border border-[var(--border)] bg-white">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🎯</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-[var(--foreground)] leading-snug flex-1">{g.title}</p>
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => openEdit(g)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all"
-                      title="Edit goal"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <button
-                      onClick={() => setDeleteId(g.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-sm"
-                    >×</button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-xs text-[var(--muted-foreground)]">{g.current || '—'} / {g.target || '—'}</span>
-                  <span className="text-xs font-bold text-[var(--sky)]">{g.progress}%</span>
-                </div>
-                <div className="mt-2 w-full h-2 bg-[var(--muted)] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${g.progress}%`, background: 'linear-gradient(90deg, #2E86C1, #5DADE2)' }} />
-                </div>
-                {/* Progress edit slider */}
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[10px] text-[var(--muted-foreground)]">Progress</span>
-                  <input
-                    type="range" min={0} max={100} value={g.progress}
-                    onChange={e => updateGoal(g.id, { progress: Number(e.target.value) })}
-                    className="flex-1 accent-[#2E86C1]"
-                  />
-                </div>
-              </div>
-            </div>
+      {/* COMPLETED GOALS */}
+      {done.length > 0 && (
+        <>
+          <div className="section-hdr mt-4">
+            <div className="section-hdr-title">✅ Completed</div>
           </div>
-        ))}
-        {state.goals.length === 0 && (
-          <div className="text-center py-8 text-[var(--muted-foreground)]">
-            <p className="text-2xl mb-2">🎯</p>
-            <p className="text-sm">No goals yet. Add your first one!</p>
+          <div className="px-4 space-y-2">
+            {done.map(g => (
+              <GoalRow key={g.id} g={g} onToggle={() => toggleGoal(g)} onEdit={() => openEdit(g)} onDelete={() => setDeleteId(g.id)} done />
+            ))}
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {state.goals.length === 0 && (
+        <div className="text-center py-8 text-[var(--muted-foreground)] px-4">
+          <p className="text-3xl mb-2">🎯</p>
+          <p className="text-sm">No goals yet. Tap + Goal to add your first one.</p>
+        </div>
+      )}
 
       {/* QUARTERLY REVIEW CTA */}
       <div className="mx-4 mt-4 p-4 rounded-2xl bg-[var(--gold-glow)] border border-[var(--gold)]/20">
@@ -262,35 +216,59 @@ export default function Goals() {
   );
 }
 
+function GoalRow({ g, onToggle, onEdit, onDelete, done }: {
+  g: Goal;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  done?: boolean;
+}) {
+  return (
+    <div className={`flex items-center gap-3 p-4 rounded-2xl border border-[var(--border)] bg-white transition-all ${done ? 'opacity-60' : ''}`}>
+      {/* Checkbox */}
+      <button
+        onClick={onToggle}
+        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${done ? 'bg-[var(--sky)] border-[var(--sky)]' : 'border-[var(--border)] hover:border-[var(--sky)]'}`}
+      >
+        {done && (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        )}
+      </button>
+      {/* Title */}
+      <p className={`flex-1 text-sm font-semibold text-[var(--foreground)] leading-snug ${done ? 'line-through text-[var(--muted-foreground)]' : ''}`}>{g.title}</p>
+      {/* Edit / Delete */}
+      <div className="flex gap-1 shrink-0">
+        <button
+          onClick={onEdit}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all"
+          title="Edit goal"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button
+          onClick={onDelete}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-base leading-none"
+        >×</button>
+      </div>
+    </div>
+  );
+}
+
 function GoalModal({ title, form, setForm, onSave, onClose, saveLabel }: {
   title: string;
-  form: { title: string; emoji: string; target: string; current: string; progress: number };
-  setForm: React.Dispatch<React.SetStateAction<{ title: string; emoji: string; target: string; current: string; progress: number }>>;
+  form: GoalForm;
+  setForm: React.Dispatch<React.SetStateAction<GoalForm>>;
   onSave: () => void;
   onClose: () => void;
   saveLabel: string;
 }) {
-  const EMOJI_OPTIONS = ['🎯','🚀','📱','📚','💪','🌐','🧠','💡','🏆','🎨','🌿','💰','🏃','✍️','🎵'];
-  // Auto-calculate progress from numerical current/target
-  useEffect(() => {
-    const cur = parseFloat((form.current || '').replace(/[^0-9.]/g, ''));
-    const tgt = parseFloat((form.target || '').replace(/[^0-9.]/g, ''));
-    if (!isNaN(cur) && !isNaN(tgt) && tgt > 0) {
-      const auto = Math.min(100, Math.round((cur / tgt) * 100));
-      setForm(f => f.progress !== auto ? { ...f, progress: auto } : f);
-    }
-  }, [form.current, form.target]);
-  const isAutoCalc = (() => {
-    const cur = parseFloat((form.current || '').replace(/[^0-9.]/g, ''));
-    const tgt = parseFloat((form.target || '').replace(/[^0-9.]/g, ''));
-    return !isNaN(cur) && !isNaN(tgt) && tgt > 0;
-  })();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-[440px] mx-4 bg-white rounded-3xl p-6 shadow-2xl max-h-[90dvh] overflow-y-auto">
+      <div className="relative w-full max-w-[440px] mx-4 bg-white rounded-3xl p-6 shadow-2xl">
         <h3 className="font-['Playfair_Display'] font-bold text-lg mb-4">{title}</h3>
 
+        {/* Emoji */}
         <div className="mb-4">
           <p className="text-sm font-semibold mb-2">Emoji</p>
           <div className="flex gap-2 flex-wrap">
@@ -302,41 +280,15 @@ function GoalModal({ title, form, setForm, onSave, onClose, saveLabel }: {
           </div>
         </div>
 
-        <div className="mb-3">
+        {/* Title */}
+        <div className="mb-6">
           <p className="text-sm font-semibold mb-1">Goal title *</p>
           <input
             className="input-field"
-            placeholder="e.g. Grow TikTok to 10K"
+            placeholder="e.g. Read 12 books this year"
             value={form.title}
             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             autoFocus
-          />
-        </div>
-
-        <div className="flex gap-3 mb-3">
-          <div className="flex-1">
-            <p className="text-sm font-semibold mb-1">Current</p>
-            <input className="input-field" placeholder="e.g. 2,400" value={form.current} onChange={e => setForm(f => ({ ...f, current: e.target.value }))} />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold mb-1">Target</p>
-            <input className="input-field" placeholder="e.g. 10,000" value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} />
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-sm font-semibold mb-1">
-            Progress: {form.progress}%
-            {(() => {
-              const cur = parseFloat((form.current || '').replace(/[^0-9.]/g, ''));
-              const tgt = parseFloat((form.target || '').replace(/[^0-9.]/g, ''));
-              return (!isNaN(cur) && !isNaN(tgt) && tgt > 0) ? <span className="text-[10px] text-[var(--muted-foreground)] ml-1 font-normal">(auto-calculated)</span> : null;
-            })()}
-          </p>
-          <input
-            type="range" min={0} max={100} value={form.progress}
-            onChange={e => setForm(f => ({ ...f, progress: Number(e.target.value) }))}
-            className="w-full accent-[#2E86C1]"
           />
         </div>
 
