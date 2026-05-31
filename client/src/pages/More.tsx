@@ -6,7 +6,6 @@ const MORE_ITEMS = [
   { href: '/roadmap',     emoji: '🏔️', title: 'Roadmap',     desc: 'Gantt chart & milestone tracker' },
   { href: '/analytics',   emoji: '📈', title: 'Analytics',   desc: 'Mood, sleep, habits & time insights' },
   { href: '/goals',       emoji: '💎', title: 'Goals',       desc: 'Quarterly focus & custom goals' },
-  { href: '/journal',     emoji: '📖', title: 'Journal',     desc: 'Morning & evening entries' },
   { href: '/profile',     emoji: '👤', title: 'Profile',     desc: 'Edit your name, bio & photo' },
   { href: '/settings',    emoji: '⚙️', title: 'Settings',    desc: 'Categories, reminders & preferences' },
 ];

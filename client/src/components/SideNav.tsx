@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: '/today',       emoji: '⚡', label: 'Today'       },
   { href: '/calendar',    emoji: '🗓️', label: 'Calendar'    },
   { href: '/habits',      emoji: '🔥', label: 'Habits'      },
+  { href: '/journal',     emoji: '📖', label: 'Journal'     },
   { href: '/reflections', emoji: '🌙', label: 'Reflections' },
   { href: '/roadmap',     emoji: '🏔️', label: 'Roadmap'     },
   { href: '/analytics',   emoji: '📈', label: 'Analytics'   },

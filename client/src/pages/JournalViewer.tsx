@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import BackButton from '@/components/BackButton';
 
 export default function JournalViewer() {
   const { state } = useApp();
@@ -24,8 +23,7 @@ export default function JournalViewer() {
     <div className="pb-8">
       <div className="topbar">
         <div>
-          <BackButton />
-          <div className="topbar-title mt-0.5">📖 Journal</div>
+          <div className="topbar-title">📖 Journal</div>
           <div className="topbar-sub">Morning &amp; evening entries</div>
         </div>
       </div>
