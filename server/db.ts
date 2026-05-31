@@ -78,7 +78,10 @@ export async function getOrCreateProfile(userId: number) {
 export async function updateProfile(userId: number, data: Partial<typeof userProfiles.$inferInsert>) {
   const db = await getDb();
   if (!db) return;
-  await db.update(userProfiles).set(data).where(eq(userProfiles.userId, userId));
+  // Upsert: insert if no row, update if exists. userId has UNIQUE constraint.
+  await db.insert(userProfiles)
+    .values({ userId, ...data })
+    .onDuplicateKeyUpdate({ set: data });
 }
 
 // ─── Categories ───────────────────────────────────────────────────────────────
