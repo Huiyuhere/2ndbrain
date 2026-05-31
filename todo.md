@@ -40,3 +40,14 @@
 - [x] All 18 vitest tests pass
 - [x] Dev preview verified: dashboard loads with data, no login, no modal
 - [x] Awaiting user click on Publish button (one-click action in Management UI)
+
+## Journal Backfill (2 days back)
+- [x] Add Today/Yesterday/2-days-ago pills above Morning/Evening tabs in Today.tsx
+- [x] Bind existingMood/existingEvening lookups to selectedDate state
+- [x] saveMorning/saveEvening write `date: selectedDate`
+- [x] useEffect refreshes form fields when selectedDate or loaded entries change
+- [x] Unsaved-changes confirm dialog before switching dates
+- [x] Subtle amber hint banner when not on today
+- [x] Green dot indicator on pills that already have an entry
+- [x] GoalBanner / streak / morning check-in modal logic untouched (today-only)
+- [x] TypeScript: 0 errors. All 18 vitest tests still pass.

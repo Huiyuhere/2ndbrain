@@ -1,10 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getTodayString } from '@/lib/store';
 import TaskCard from '@/components/TaskCard';
 import GoalBanner from '@/components/GoalBanner';
 import WeekStrip from '@/components/WeekStrip';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Compute YYYY-MM-DD for a given offset back from today (in local TZ)
+function dateStringForOffset(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - offsetDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function prettyDateLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
 
 export default function Today() {
   const { state, toggleHabit, saveMoodEntry, saveEveningEntry } = useApp();
@@ -13,13 +29,24 @@ export default function Today() {
   const doneTasks = state.tasks.filter(t => t.column === 'done' && t.completedAt === today);
   const [journalTab, setJournalTab] = useState<'morning' | 'evening'>('morning');
 
-  // Morning
-  const existingMood = state.moodEntries.find(e => e.date === today);
+  // Date selector for journal backfill (today, yesterday, 2 days ago)
+  const datePills = useMemo(
+    () => [
+      { offset: 0, label: 'Today', date: dateStringForOffset(0) },
+      { offset: 1, label: 'Yesterday', date: dateStringForOffset(1) },
+      { offset: 2, label: '2 days ago', date: dateStringForOffset(2) },
+    ],
+    []
+  );
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  // Morning — re-bound to selectedDate
+  const existingMood = state.moodEntries.find(e => e.date === selectedDate);
   const [intention, setIntention] = useState(existingMood?.intention || '');
   const [focus, setFocus] = useState(existingMood?.focus || '');
 
-  // Evening
-  const existingEvening = state.eveningEntries.find(e => e.date === today);
+  // Evening — re-bound to selectedDate
+  const existingEvening = state.eveningEntries.find(e => e.date === selectedDate);
   const [location, setLocation] = useState(existingEvening?.location || 'Singapore');
   const [dayTitle, setDayTitle] = useState(existingEvening?.title || '');
   const [rating, setRating] = useState(existingEvening?.rating || 0);
@@ -30,15 +57,86 @@ export default function Today() {
   const [morningSaved, setMorningSaved] = useState(!!existingMood);
   const [eveningSaved, setEveningSaved] = useState(!!existingEvening);
 
+  // Track if the user has unsaved changes vs. what's stored for selectedDate
+  const morningDirty =
+    !morningSaved &&
+    (intention !== (existingMood?.intention || '') || focus !== (existingMood?.focus || ''));
+  const eveningDirty =
+    !eveningSaved &&
+    (location !== (existingEvening?.location || 'Singapore') ||
+      dayTitle !== (existingEvening?.title || '') ||
+      rating !== (existingEvening?.rating || 0) ||
+      freeWrite !== (existingEvening?.freeWrite || '') ||
+      JSON.stringify(highlights) !==
+        JSON.stringify(
+          existingEvening?.highlights || [
+            { type: '+', text: '' },
+            { type: '+', text: '' },
+            { type: '-', text: '' },
+          ]
+        ));
+
+  // When selectedDate changes (or upstream entries refresh), refresh form fields
+  useEffect(() => {
+    const m = state.moodEntries.find(e => e.date === selectedDate);
+    setIntention(m?.intention || '');
+    setFocus(m?.focus || '');
+    setMorningSaved(!!m);
+
+    const ev = state.eveningEntries.find(e => e.date === selectedDate);
+    setLocation(ev?.location || 'Singapore');
+    setDayTitle(ev?.title || '');
+    setRating(ev?.rating || 0);
+    setHighlights(
+      ev?.highlights || [
+        { type: '+', text: '' },
+        { type: '+', text: '' },
+        { type: '-', text: '' },
+      ]
+    );
+    setFreeWrite(ev?.freeWrite || '');
+    setEveningSaved(!!ev);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, state.moodEntries, state.eveningEntries]);
+
+  function handlePillClick(targetDate: string) {
+    if (targetDate === selectedDate) return;
+    if (morningDirty || eveningDirty) {
+      const ok = window.confirm(
+        'You have unsaved changes for ' +
+          prettyDateLabel(selectedDate) +
+          '. Switch dates and discard them?'
+      );
+      if (!ok) return;
+    }
+    setSelectedDate(targetDate);
+  }
+
   function saveMorning() {
-    saveMoodEntry({ date: today, mood: existingMood?.mood || 3, sleep: existingMood?.sleep || 7, intention, focus });
+    saveMoodEntry({
+      date: selectedDate,
+      mood: existingMood?.mood || 3,
+      sleep: existingMood?.sleep || 7,
+      intention,
+      focus,
+    });
     setMorningSaved(true);
   }
 
   function saveEvening() {
-    saveEveningEntry({ date: today, location, title: dayTitle, rating, highlights: highlights.filter(h => h.text), freeWrite });
+    saveEveningEntry({
+      date: selectedDate,
+      location,
+      title: dayTitle,
+      rating,
+      highlights: highlights.filter(h => h.text),
+      freeWrite,
+    });
     setEveningSaved(true);
   }
+
+  const isToday = selectedDate === today;
+  const todayMood = state.moodEntries.find(e => e.date === today);
 
   return (
     <div className="pb-4">
@@ -54,8 +152,8 @@ export default function Today() {
         </div>
       </div>
 
-      {/* FOCUS BANNER — shows today's focus from morning check-in, falls back to quarterly goal */}
-      <GoalBanner compact focusOverride={existingMood?.focus || undefined} />
+      {/* FOCUS BANNER — always tied to today's mood entry */}
+      <GoalBanner compact focusOverride={todayMood?.focus || undefined} />
 
       {/* WEEK STRIP — shared component */}
       <WeekStrip />
@@ -104,6 +202,38 @@ export default function Today() {
         <div className="section-hdr-title">📖 Journal</div>
       </div>
       <div className="px-4">
+        {/* DATE BACKFILL PILLS */}
+        <div className="flex gap-2 mb-3">
+          {datePills.map(p => {
+            const active = p.date === selectedDate;
+            const hasEntry =
+              state.moodEntries.some(e => e.date === p.date) ||
+              state.eveningEntries.some(e => e.date === p.date);
+            return (
+              <button
+                key={p.offset}
+                onClick={() => handlePillClick(p.date)}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-semibold border-2 transition-all ${
+                  active
+                    ? 'border-transparent text-white btn-sky'
+                    : 'border-[var(--border)] text-[var(--muted-foreground)] bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <span>{p.label}</span>
+                  {hasEntry && <span className={active ? 'opacity-90' : 'text-green-500'}>•</span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {!isToday && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+            Backfilling <strong>{prettyDateLabel(selectedDate)}</strong>. Streaks &amp; the morning check-in only apply to today.
+          </div>
+        )}
+
         <div className="tab-switcher">
           <button className={`tab-btn ${journalTab === 'morning' ? 'active' : ''}`} onClick={() => setJournalTab('morning')}>☀️ Morning</button>
           <button className={`tab-btn ${journalTab === 'evening' ? 'active' : ''}`} onClick={() => setJournalTab('evening')}>🌙 Evening</button>
@@ -122,7 +252,7 @@ export default function Today() {
               ) : (
                 <>
                   <div className="prompt-block">
-                    <div className="prompt-q">☀️ Today's intention</div>
+                    <div className="prompt-q">☀️ {isToday ? "Today's intention" : `Intention for ${prettyDateLabel(selectedDate)}`}</div>
                     <input
                       className="input-field font-['Playfair_Display'] italic"
                       placeholder="What am I here to do today?"
@@ -131,7 +261,7 @@ export default function Today() {
                     />
                   </div>
                   <div className="prompt-block">
-                    <div className="prompt-q">🎯 Today's #1 focus task</div>
+                    <div className="prompt-q">🎯 #1 focus task</div>
                     <input
                       className="input-field"
                       placeholder="The single most important thing..."
@@ -139,7 +269,9 @@ export default function Today() {
                       onChange={e => setFocus(e.target.value)}
                     />
                   </div>
-                  <button onClick={saveMorning} className="w-full py-3.5 rounded-2xl text-white font-bold btn-sky">Let's go →</button>
+                  <button onClick={saveMorning} className="w-full py-3.5 rounded-2xl text-white font-bold btn-sky">
+                    {isToday ? "Let's go →" : `Save for ${prettyDateLabel(selectedDate)} →`}
+                  </button>
                 </>
               )}
             </motion.div>
@@ -164,7 +296,7 @@ export default function Today() {
                   </div>
 
                   <div className="prompt-block">
-                    <div className="prompt-q">Today's title or quote</div>
+                    <div className="prompt-q">{isToday ? "Today's title or quote" : `Title or quote for ${prettyDateLabel(selectedDate)}`}</div>
                     <input className="input-field font-['Playfair_Display'] italic" placeholder="有光的地方 ♥" value={dayTitle} onChange={e => setDayTitle(e.target.value)} />
                   </div>
 
@@ -220,7 +352,9 @@ export default function Today() {
                     <textarea className="input-field min-h-[80px] resize-none" placeholder="Anything else on your mind..." value={freeWrite} onChange={e => setFreeWrite(e.target.value)} />
                   </div>
 
-                  <button onClick={saveEvening} className="w-full py-3.5 rounded-2xl text-white font-bold btn-sky mb-2">Save evening entry 🌙</button>
+                  <button onClick={saveEvening} className="w-full py-3.5 rounded-2xl text-white font-bold btn-sky mb-2">
+                    {isToday ? 'Save evening entry 🌙' : `Save for ${prettyDateLabel(selectedDate)} 🌙`}
+                  </button>
                 </>
               )}
             </motion.div>
