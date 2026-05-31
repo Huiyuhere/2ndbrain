@@ -67,6 +67,17 @@ export type Reflection = {
   answers: Record<string, string>;
 };
 
+export type RoadmapProject = {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  startMonth: number; // 0-indexed from Jan 2026
+  endMonth: number;
+  progress: number; // 0-100
+  milestones: { month: number; label: string }[];
+};
+
 export type AppState = {
   focusMode: 'life' | 'work' | 'personal';
   categories: Category[];
@@ -76,6 +87,7 @@ export type AppState = {
   eveningEntries: EveningEntry[];
   goals: Goal[];
   reflections: Reflection[];
+  roadmapProjects: RoadmapProject[];
   quarterlyGoal: { text: string; progress: number; daysLeft: number };
   checkinDone: boolean; // for today
   streak: number;
@@ -140,6 +152,13 @@ const DEFAULT_EVENING: EveningEntry[] = [
   { date: '2026-05-28', location: 'Singapore', title: '有光的地方 ♥', rating: 8, highlights: [{ type: '+', text: 'Pleasant surprise with female sign ups' }, { type: '+', text: 'Walk in the park' }, { type: '+', text: '2x movies — Ratatouille <3' }, { type: '-', text: 'Procrastinated to wake up' }], freeWrite: '' },
 ];
 
+const DEFAULT_ROADMAP_PROJECTS: RoadmapProject[] = [
+  { id: 'rp1', name: 'Type Platform', emoji: '💎', color: '#2E86C1', startMonth: 1, endMonth: 7, progress: 58, milestones: [{ month: 3, label: 'Beta' }, { month: 6, label: 'Launch' }] },
+  { id: 'rp2', name: 'TikTok Growth', emoji: '📱', color: '#F0B429', startMonth: 0, endMonth: 11, progress: 42, milestones: [{ month: 4, label: '5K' }, { month: 8, label: '10K' }] },
+  { id: 'rp3', name: 'Portfolio Site', emoji: '🌐', color: '#4A7C59', startMonth: 3, endMonth: 5, progress: 80, milestones: [{ month: 5, label: 'Live' }] },
+  { id: 'rp4', name: 'ADHD Tool', emoji: '🧠', color: '#C4A882', startMonth: 5, endMonth: 9, progress: 10, milestones: [{ month: 7, label: 'MVP' }] },
+];
+
 function getDefaultState(): AppState {
   return {
     focusMode: 'life',
@@ -150,6 +169,7 @@ function getDefaultState(): AppState {
     eveningEntries: DEFAULT_EVENING,
     goals: DEFAULT_GOALS,
     reflections: [],
+    roadmapProjects: DEFAULT_ROADMAP_PROJECTS,
     quarterlyGoal: { text: 'Build & launch Type — the modern speed dating platform.', progress: 58, daysLeft: 29 },
     checkinDone: false,
     streak: 7,

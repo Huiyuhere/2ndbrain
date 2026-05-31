@@ -7,18 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 type Props = {
   task: Task;
   showBorder?: boolean;
-  onMove?: (col: Task['column']) => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 };
 
-const COLUMNS: { value: Task['column']; label: string }[] = [
-  { value: 'ideas', label: '💡 Ideas' },
-  { value: 'future', label: '🏔️ Future' },
-  { value: 'week', label: '📋 This Week' },
-  { value: 'today', label: '⚡ Today' },
-  { value: 'done', label: '✅ Done' },
-];
-
-export default function TaskCard({ task, showBorder = false }: Props) {
+export default function TaskCard({ task, showBorder = false, draggable: isDraggable = false, onDragStart }: Props) {
   const { updateTask, deleteTask, moveTask } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -54,7 +47,9 @@ export default function TaskCard({ task, showBorder = false }: Props) {
 
   return (
     <div
-      className={`task-card mb-2 ${showBorder ? 'border-l-[3px] border-l-[var(--sky)]' : ''} ${isDone ? 'opacity-60' : ''}`}
+      className={`task-card mb-2 ${showBorder ? 'border-l-[3px] border-l-[var(--sky)]' : ''} ${isDone ? 'opacity-60' : ''} ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      draggable={isDraggable}
+      onDragStart={onDragStart}
     >
       {/* Main row */}
       <div className="flex items-start gap-2" onClick={() => setExpanded(e => !e)}>
@@ -171,22 +166,6 @@ export default function TaskCard({ task, showBorder = false }: Props) {
                   + Add link
                 </button>
               )}
-
-              {/* Move to column */}
-              <div className="mb-3" onClick={e => e.stopPropagation()}>
-                <p className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Move to</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {COLUMNS.filter(c => c.value !== task.column).map(col => (
-                    <button
-                      key={col.value}
-                      onClick={() => moveTask(task.id, col.value)}
-                      className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--sky)] hover:text-[var(--sky)] transition-all"
-                    >
-                      {col.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Edit / Delete */}
               <div className="flex gap-2" onClick={e => e.stopPropagation()}>

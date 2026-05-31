@@ -3,10 +3,10 @@ import { useApp } from '@/contexts/AppContext';
 import { Task } from '@/lib/store';
 import CategoryPill from '@/components/CategoryPill';
 import GoalBanner from '@/components/GoalBanner';
+import WeekStrip from '@/components/WeekStrip';
 import { toast } from 'sonner';
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6am - 9pm
-const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function getWeekDays() {
   const today = new Date(2026, 4, 31);
@@ -83,27 +83,12 @@ export default function CalendarPage() {
 
       <GoalBanner compact />
 
-      {/* WEEK STRIP */}
-      <div className="flex gap-1.5 px-4 mt-3 overflow-x-auto pb-1">
-        {weekDays.map((d, i) => {
-          const isActive = i === activeDay;
-          const hasEvents = state.tasks.some(t => t.scheduledDate === d.toISOString().split('T')[0]);
-          return (
-            <button
-              key={i}
-              onClick={() => setActiveDay(i)}
-              className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl min-w-[44px] transition-all ${
-                isActive ? 'text-white shadow-md' : 'bg-white border border-[var(--border)] text-[var(--muted-foreground)]'
-              }`}
-              style={isActive ? { background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' } : {}}
-            >
-              <span className="text-[10px] font-semibold">{DAYS_SHORT[d.getDay()]}</span>
-              <span className="text-sm font-bold">{d.getDate()}</span>
-              {hasEvents && <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-white/60' : 'bg-[var(--sky)]'}`} />}
-            </button>
-          );
-        })}
-      </div>
+      {/* WEEK STRIP — shared component */}
+      <WeekStrip
+        activeIndex={activeDay}
+        onDaySelect={setActiveDay}
+        eventDots={weekDays.map(d => state.tasks.some(t => t.scheduledDate === d.toISOString().split('T')[0]))}
+      />
 
       {/* MAIN LAYOUT: Calendar + Import Panel side by side on desktop */}
       <div className="flex gap-0 md:gap-4 md:px-4 mt-3">
@@ -215,10 +200,9 @@ export default function CalendarPage() {
 
       {/* DURATION MODAL */}
       {durationModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setDurationModal(null)} />
-          <div className="relative w-full max-w-[480px] bg-white rounded-t-3xl p-6 pb-10">
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDurationModal(null)} />
+          <div className="relative w-full max-w-[420px] mx-4 bg-white rounded-3xl p-6 shadow-2xl">
             <p className="font-semibold text-[var(--foreground)] mb-1 truncate">{durationModal.task.title}</p>
             <p className="text-sm text-[var(--muted-foreground)] mb-4">
               Scheduling at {durationModal.hour < 12 ? `${durationModal.hour}am` : durationModal.hour === 12 ? '12pm' : `${durationModal.hour - 12}pm`}

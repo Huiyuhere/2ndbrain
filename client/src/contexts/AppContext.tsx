@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection, Category, loadState, saveState, getTodayString, autoClassify } from '@/lib/store';
+import { AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection, Category, RoadmapProject, loadState, saveState, getTodayString, autoClassify } from '@/lib/store';
 import { nanoid } from 'nanoid';
 
 type AppContextType = {
@@ -17,6 +17,13 @@ type AppContextType = {
   markCheckinDone: () => void;
   updateCategories: (cats: Category[]) => void;
   updateQuarterlyGoal: (updates: Partial<AppState['quarterlyGoal']>) => void;
+  addHabit: (habit: Omit<Habit, 'id' | 'completedDates'>) => void;
+  deleteHabit: (id: string) => void;
+  addGoal: (goal: Omit<Goal, 'id'>) => void;
+  deleteGoal: (id: string) => void;
+  addProject: (project: Omit<RoadmapProject, 'id'>) => void;
+  updateProject: (id: string, updates: Partial<RoadmapProject>) => void;
+  deleteProject: (id: string) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -119,11 +126,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, quarterlyGoal: { ...s.quarterlyGoal, ...updates } }));
   }, []);
 
+  const addHabit = useCallback((habit: Omit<Habit, 'id' | 'completedDates'>) => {
+    setState(s => ({ ...s, habits: [...s.habits, { ...habit, id: nanoid(), completedDates: [] }] }));
+  }, []);
+
+  const deleteHabit = useCallback((id: string) => {
+    setState(s => ({ ...s, habits: s.habits.filter(h => h.id !== id) }));
+  }, []);
+
+  const addGoal = useCallback((goal: Omit<Goal, 'id'>) => {
+    setState(s => ({ ...s, goals: [...s.goals, { ...goal, id: nanoid() }] }));
+  }, []);
+
+  const deleteGoal = useCallback((id: string) => {
+    setState(s => ({ ...s, goals: s.goals.filter(g => g.id !== id) }));
+  }, []);
+
+  const addProject = useCallback((project: Omit<RoadmapProject, 'id'>) => {
+    setState(s => ({ ...s, roadmapProjects: [...(s.roadmapProjects || []), { ...project, id: nanoid() }] }));
+  }, []);
+
+  const updateProject = useCallback((id: string, updates: Partial<RoadmapProject>) => {
+    setState(s => ({ ...s, roadmapProjects: (s.roadmapProjects || []).map(p => p.id === id ? { ...p, ...updates } : p) }));
+  }, []);
+
+  const deleteProject = useCallback((id: string) => {
+    setState(s => ({ ...s, roadmapProjects: (s.roadmapProjects || []).filter(p => p.id !== id) }));
+  }, []);
+
   return (
     <AppContext.Provider value={{
       state, setFocusMode, addTask, updateTask, deleteTask, moveTask,
         toggleHabit, saveMoodEntry, saveEveningEntry, saveReflection, updateGoal, markCheckinDone,
         updateCategories, updateQuarterlyGoal,
+        addHabit, deleteHabit, addGoal, deleteGoal, addProject, updateProject, deleteProject,
     }}>
       {children}
     </AppContext.Provider>

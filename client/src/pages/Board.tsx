@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { filterTasksByMode, Task, autoClassify } from '@/lib/store';
 import BottomNav from '@/components/BottomNav';
@@ -18,11 +18,13 @@ const COLUMNS: Column[] = [
 ];
 
 export default function Board() {
-  const { state, setFocusMode, addTask, markCheckinDone } = useApp();
+  const { state, setFocusMode, addTask, moveTask, markCheckinDone } = useApp();
   const [showCheckin, setShowCheckin] = useState(!state.checkinDone);
   const [activeCol, setActiveCol] = useState(0);
   const [addingTo, setAddingTo] = useState<Task['column'] | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [dragOverCol, setDragOverCol] = useState<Task['column'] | null>(null);
+  const dragTaskId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!state.checkinDone) setShowCheckin(true);
@@ -36,6 +38,37 @@ export default function Board() {
     addTask({ title: newTitle.trim(), column: addingTo, categoryId: autoClassify(newTitle, state.categories) });
     setNewTitle('');
     setAddingTo(null);
+  }
+
+  function handleDragStart(e: React.DragEvent, taskId: string) {
+    dragTaskId.current = taskId;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', taskId);
+  }
+
+  function handleDragOver(e: React.DragEvent, colId: Task['column']) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCol(colId);
+  }
+
+  function handleDragLeave() {
+    setDragOverCol(null);
+  }
+
+  function handleDrop(e: React.DragEvent, colId: Task['column']) {
+    e.preventDefault();
+    const taskId = dragTaskId.current || e.dataTransfer.getData('text/plain');
+    if (taskId) {
+      moveTask(taskId, colId);
+    }
+    dragTaskId.current = null;
+    setDragOverCol(null);
+  }
+
+  function handleDragEnd() {
+    dragTaskId.current = null;
+    setDragOverCol(null);
   }
 
   return (
@@ -69,8 +102,11 @@ export default function Board() {
         ))}
       </div>
 
+      {/* DRAG HINT */}
+      <p className="text-center text-[10px] text-[var(--muted-foreground)] mt-2">Drag cards between columns to move them</p>
+
       {/* SCROLL DOTS */}
-      <div className="flex gap-1.5 justify-center mt-3">
+      <div className="flex gap-1.5 justify-center mt-1.5">
         {COLUMNS.map((_, i) => (
           <div key={i} className={`rounded-full transition-all ${i === activeCol ? 'w-4 h-1.5 bg-[var(--sky)]' : 'w-1.5 h-1.5 bg-[var(--border)]'}`} />
         ))}
@@ -86,17 +122,37 @@ export default function Board() {
       >
         {COLUMNS.map(col => {
           const tasks = tasksByCol(col.id);
+          const isOver = dragOverCol === col.id;
           return (
-            <div key={col.id} className="kanban-col">
+            <div
+              key={col.id}
+              className={`kanban-col transition-all ${isOver ? 'ring-2 ring-[var(--sky)] ring-offset-1 rounded-2xl bg-[var(--sky-mist)]/40' : ''}`}
+              onDragOver={e => handleDragOver(e, col.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={e => handleDrop(e, col.id)}
+            >
               {/* Column header */}
               <div className={`flex items-center justify-between px-3 py-2 rounded-xl mb-2 ${col.headerClass}`}>
                 <span className="text-sm font-bold">{col.emoji} {col.label}</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.countClass}`}>{tasks.length}</span>
               </div>
 
+              {/* Drop zone hint when dragging */}
+              {isOver && (
+                <div className="mb-2 py-2 border-2 border-dashed border-[var(--sky)] rounded-xl text-center text-xs text-[var(--sky)] font-semibold">
+                  Drop here
+                </div>
+              )}
+
               {/* Tasks */}
               {tasks.map(task => (
-                <TaskCard key={task.id} task={task} showBorder={col.id === 'today'} />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  showBorder={col.id === 'today'}
+                  draggable
+                  onDragStart={e => handleDragStart(e, task.id)}
+                />
               ))}
 
               {/* Add task inline */}

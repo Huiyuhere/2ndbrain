@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getWeekDates, getTodayString } from '@/lib/store';
+import { getTodayString } from '@/lib/store';
 import GoalBanner from '@/components/GoalBanner';
 import { toast } from 'sonner';
 
@@ -14,13 +14,16 @@ function getLastNDays(n: number): string[] {
   });
 }
 
+const EMOJI_OPTIONS = ['⏰','🏃','✍️','📚','🧘','📵','💧','🥗','🌅','💪','🎯','🧠','🌿','🎨','🎵'];
+
 export default function Habits() {
-  const { state, toggleHabit } = useApp();
+  const { state, toggleHabit, addHabit, deleteHabit } = useApp();
   const today = getTodayString();
   const last7 = getLastNDays(7);
   const [addingHabit, setAddingHabit] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmoji, setNewEmoji] = useState('⭐');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   function getStreak(completedDates: string[]): number {
     let streak = 0;
@@ -39,6 +42,21 @@ export default function Habits() {
     const total = state.habits.length * 7;
     const done = state.habits.reduce((acc, h) => acc + last7.filter(d => h.completedDates.includes(d)).length, 0);
     return total > 0 ? Math.round((done / total) * 100) : 0;
+  }
+
+  function handleAddHabit() {
+    if (!newName.trim()) return;
+    addHabit({ name: newName.trim(), emoji: newEmoji });
+    toast.success(`Habit "${newName.trim()}" added!`);
+    setAddingHabit(false);
+    setNewName('');
+    setNewEmoji('⭐');
+  }
+
+  function handleDeleteHabit(id: string, name: string) {
+    deleteHabit(id);
+    toast.success(`Habit "${name}" removed`);
+    setConfirmDelete(null);
   }
 
   const weekScore = getWeekScore();
@@ -109,14 +127,16 @@ export default function Habits() {
         <div className="flex items-center mb-2">
           <div className="flex-1" />
           {last7.map((d, i) => {
-            const date = new Date(d);
+            const date = new Date(d + 'T12:00:00');
             const isToday = d === today;
             return (
               <div key={i} className={`w-9 text-center text-[11px] font-semibold ${isToday ? 'text-[var(--sky)]' : 'text-[var(--muted-foreground)]'}`}>
-                {DAYS_SHORT[date.getDay()]}
+                {DAYS_SHORT[(date.getDay() + 6) % 7]}
               </div>
             );
           })}
+          {/* spacer for delete col */}
+          <div className="w-8" />
         </div>
 
         {/* Habit rows */}
@@ -153,9 +173,24 @@ export default function Habits() {
                     </button>
                   );
                 })}
+                {/* Delete button */}
+                <button
+                  onClick={() => setConfirmDelete(h.id)}
+                  className="w-8 h-8 ml-1 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-base leading-none"
+                  title="Delete habit"
+                >
+                  ×
+                </button>
               </div>
             );
           })}
+
+          {state.habits.length === 0 && (
+            <div className="text-center py-8 text-[var(--muted-foreground)]">
+              <p className="text-2xl mb-2">🌱</p>
+              <p className="text-sm">No habits yet. Add your first one!</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -186,17 +221,17 @@ export default function Habits() {
         </p>
       </div>
 
-      {/* ADD HABIT MODAL */}
+      {/* ADD HABIT MODAL — centered */}
       {addingHabit && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setAddingHabit(false)} />
-          <div className="relative w-full max-w-[480px] bg-white rounded-t-3xl p-6 pb-10">
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <h3 className="font-['Playfair_Display'] font-bold text-lg mb-4">Add new habit</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setAddingHabit(false)} />
+          <div className="relative w-full max-w-[420px] mx-4 bg-white rounded-3xl p-6 shadow-2xl">
+            <h3 className="font-['Playfair_Display'] font-bold text-lg mb-1">Add new habit</h3>
+            <p className="text-xs text-[var(--muted-foreground)] mb-4">Build your daily ritual, one habit at a time.</p>
             <div className="mb-4">
-              <p className="text-sm font-semibold mb-2">Emoji</p>
+              <p className="text-sm font-semibold mb-2">Choose an emoji</p>
               <div className="flex gap-2 flex-wrap">
-                {['⏰','🏃','✍️','📚','🧘','📵','💧','🥗','🌅','💪'].map(e => (
+                {EMOJI_OPTIONS.map(e => (
                   <button key={e} onClick={() => setNewEmoji(e)}
                     className={`w-10 h-10 rounded-xl text-xl border-2 transition-all ${newEmoji === e ? 'border-[var(--sky)] bg-[var(--sky-mist)]' : 'border-[var(--border)]'}`}
                   >{e}</button>
@@ -210,19 +245,54 @@ export default function Habits() {
                 placeholder="e.g. Morning walk"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddHabit()}
+                autoFocus
               />
             </div>
-            <button
-              onClick={() => {
-                if (!newName.trim()) return;
-                toast.success(`Habit "${newName}" added!`);
-                setAddingHabit(false);
-                setNewName('');
-              }}
-              className="w-full py-3.5 rounded-2xl text-white font-bold btn-sky"
-            >
-              Add habit
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setAddingHabit(false); setNewName(''); }}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold border border-[var(--border)] text-[var(--muted-foreground)]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddHabit}
+                disabled={!newName.trim()}
+                className="flex-1 py-3 rounded-2xl text-white font-bold btn-sky disabled:opacity-40"
+              >
+                Add habit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE MODAL — centered */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
+          <div className="relative w-full max-w-[360px] mx-4 bg-white rounded-3xl p-6 shadow-2xl text-center">
+            <p className="text-3xl mb-3">🗑️</p>
+            <h3 className="font-['Playfair_Display'] font-bold text-base mb-2">Delete this habit?</h3>
+            <p className="text-sm text-[var(--muted-foreground)] mb-5">Your streak and history will be lost.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold border border-[var(--border)]"
+              >
+                Keep it
+              </button>
+              <button
+                onClick={() => {
+                  const h = state.habits.find(h => h.id === confirmDelete);
+                  if (h) handleDeleteHabit(h.id, h.name);
+                }}
+                className="flex-1 py-3 rounded-2xl text-white font-bold bg-red-500"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,8 +1,15 @@
 import { useApp } from '@/contexts/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import GoalBanner from '@/components/GoalBanner';
+import BackButton from '@/components/BackButton';
 
 const COLORS = ['#2E86C1', '#5DADE2', '#F0B429', '#4A7C59', '#C4A882', '#C0392B'];
+
+const STAT_CARDS = [
+  { key: 'tasks', label: 'Task rate', bg: 'bg-[#E8F4FB]', text: 'text-[#2471A3]', border: 'border-[#BDD8EF]' },
+  { key: 'habits', label: 'Habit score', bg: 'bg-[#E8F8F2]', text: 'text-[#2E8B57]', border: 'border-[#B2DFC8]' },
+  { key: 'mood', label: 'Avg mood', bg: 'bg-[#FEF5E0]', text: 'text-[#C9952A]', border: 'border-[#F0D89A]' },
+  { key: 'goal', label: 'Q2 progress', bg: 'bg-[#F0EDF8]', text: 'text-[#6B5EA8]', border: 'border-[#C9C0E8]' },
+];
 
 export default function Analytics() {
   const { state } = useApp();
@@ -40,16 +47,22 @@ export default function Analytics() {
   const avgMood = moodData.length ? (moodData.reduce((a, e) => a + e.mood, 0) / moodData.length).toFixed(1) : '—';
   const weeklyScore = Math.round(completionRate * 0.25 + habitScore * 0.25 + (parseFloat(String(avgMood)) || 3) / 5 * 100 * 0.2 + state.quarterlyGoal.progress * 0.3);
 
+  const statValues = [
+    `${completionRate}%`,
+    `${habitScore}%`,
+    `${avgMood}/5`,
+    `${state.quarterlyGoal.progress}%`,
+  ];
+
   return (
     <div className="pb-4">
       <div className="topbar">
         <div>
-          <div className="topbar-title">📈 Analytics</div>
+          <BackButton />
+          <div className="topbar-title mt-0.5">📈 Analytics</div>
           <div className="topbar-sub">Week of 25–31 May 2026</div>
         </div>
       </div>
-
-      <GoalBanner compact />
 
       {/* WEEKLY SCORE HERO */}
       <div className="mx-4 mt-4 p-5 rounded-2xl text-white" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>
@@ -61,18 +74,16 @@ export default function Analytics() {
         <p className="text-white/80 text-sm mt-1">
           {weeklyScore >= 80 ? '🔥 Empire mode activated.' : weeklyScore >= 60 ? '💪 Solid. Push harder.' : '📈 The mountain is still ahead.'}
         </p>
-        <div className="grid grid-cols-3 gap-3 mt-4">
-          {[
-            { label: 'Task rate', value: `${completionRate}%` },
-            { label: 'Habit score', value: `${habitScore}%` },
-            { label: 'Avg mood', value: `${avgMood}/5` },
-          ].map(s => (
-            <div key={s.label} className="bg-white/15 rounded-xl p-2.5 text-center">
-              <p className="text-white font-bold text-base">{s.value}</p>
-              <p className="text-white/60 text-[10px] mt-0.5">{s.label}</p>
-            </div>
-          ))}
-        </div>
+      </div>
+
+      {/* COLOURED STAT CARDS */}
+      <div className="px-4 mt-4 grid grid-cols-2 gap-3">
+        {STAT_CARDS.map((s, i) => (
+          <div key={s.key} className={`p-4 rounded-2xl border ${s.bg} ${s.border}`}>
+            <p className={`font-bold text-2xl font-['Playfair_Display'] ${s.text}`}>{statValues[i]}</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5 font-medium">{s.label}</p>
+          </div>
+        ))}
       </div>
 
       {/* MOOD + SLEEP CHART — fixed width, scrollable */}

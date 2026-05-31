@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
+import BackButton from '@/components/BackButton';
 
 const COLOUR_OPTIONS = [
   '#2E86C1','#5DADE2','#F0B429','#4A7C59','#C4A882','#C0392B',
@@ -56,7 +57,8 @@ export default function Settings() {
     <div className="pb-4">
       <div className="topbar">
         <div>
-          <div className="topbar-title">⚙️ Settings</div>
+          <BackButton />
+          <div className="topbar-title mt-0.5">⚙️ Settings</div>
           <div className="topbar-sub">Preferences & categories</div>
         </div>
       </div>

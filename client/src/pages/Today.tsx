@@ -3,27 +3,14 @@ import { useApp } from '@/contexts/AppContext';
 import { getTodayString } from '@/lib/store';
 import TaskCard from '@/components/TaskCard';
 import GoalBanner from '@/components/GoalBanner';
+import WeekStrip from '@/components/WeekStrip';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-function getWeekDays() {
-  const today = new Date(2026, 4, 31); // May 31 2026
-  const dow = today.getDay();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - dow + i);
-    return d;
-  });
-}
 
 export default function Today() {
   const { state, toggleHabit, saveMoodEntry, saveEveningEntry } = useApp();
   const today = getTodayString();
   const todayTasks = state.tasks.filter(t => t.column === 'today');
   const doneTasks = state.tasks.filter(t => t.column === 'done' && t.completedAt === today);
-  const weekDays = getWeekDays();
   const [journalTab, setJournalTab] = useState<'morning' | 'evening'>('morning');
 
   // Morning
@@ -67,23 +54,11 @@ export default function Today() {
         </div>
       </div>
 
-      {/* GOAL BANNER */}
-      <GoalBanner compact />
+      {/* FOCUS BANNER — shows today's focus from morning check-in, falls back to quarterly goal */}
+      <GoalBanner compact focusOverride={existingMood?.focus || undefined} />
 
-      {/* WEEK STRIP */}
-      <div className="flex gap-1.5 px-4 mt-4 overflow-x-auto pb-1">
-        {weekDays.map((d, i) => {
-          const isToday = d.getDate() === 31 && d.getMonth() === 4;
-          return (
-            <div key={i} className={`flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl min-w-[44px] cursor-pointer transition-all ${
-              isToday ? 'bg-[var(--sky)] text-white shadow-md' : 'bg-white border border-[var(--border)] text-[var(--muted-foreground)]'
-            }`}>
-              <span className="text-[10px] font-semibold">{DAYS[d.getDay()]}</span>
-              <span className="text-sm font-bold">{d.getDate()}</span>
-            </div>
-          );
-        })}
-      </div>
+      {/* WEEK STRIP — shared component */}
+      <WeekStrip />
 
       {/* HABIT STRIP */}
       <div className="section-hdr mt-4">
