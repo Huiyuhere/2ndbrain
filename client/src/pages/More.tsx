@@ -6,6 +6,8 @@ const MORE_ITEMS = [
   { href: '/roadmap',     emoji: '🏔️', title: 'Roadmap',     desc: 'Gantt chart & milestone tracker' },
   { href: '/analytics',   emoji: '📈', title: 'Analytics',   desc: 'Mood, sleep, habits & time insights' },
   { href: '/goals',       emoji: '💎', title: 'Goals',       desc: 'Quarterly focus & custom goals' },
+  { href: '/journal',     emoji: '📖', title: 'Journal',     desc: 'Morning & evening entries' },
+  { href: '/profile',     emoji: '👤', title: 'Profile',     desc: 'Edit your name, bio & photo' },
   { href: '/settings',    emoji: '⚙️', title: 'Settings',    desc: 'Categories, reminders & preferences' },
 ];
 
@@ -21,7 +23,15 @@ export default function More() {
         </div>
         <div className="flex items-center gap-2">
           <span className="streak-badge">🔥 {state.streak}</span>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>TH</div>
+          <Link href="/profile">
+            {state.userProfile?.avatarUrl ? (
+              <img src={state.userProfile.avatarUrl} alt="avatar" className="w-9 h-9 rounded-full object-cover shadow border-2 border-white" />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>
+                {(state.userProfile?.name || 'TH').slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </Link>
         </div>
       </div>
 

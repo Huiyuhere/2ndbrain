@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import BackButton from '@/components/BackButton';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const TODAY_MONTH = 4; // May (0-indexed)
+const TODAY_MONTH = new Date().getMonth(); // live current month
 
 const COLOR_OPTIONS = ['#2E86C1','#F0B429','#4A7C59','#C4A882','#C0392B','#6B5EA8','#2E8B57','#E67E22'];
 const EMOJI_OPTIONS = ['💎','📱','🌐','🧠','🚀','🎯','📚','💪','🎨','🌿','💰','🏆'];
@@ -24,7 +24,7 @@ const EMPTY_FORM: ProjectForm = { name: '', emoji: '🚀', color: '#2E86C1', sta
 export default function Roadmap() {
   const { state, addProject, updateProject, deleteProject } = useApp();
   const projects = state.roadmapProjects || [];
-  const [view, setView] = useState<'year' | 'q'>('year');
+  const [view, setView] = useState<'year' | 'q'>('q');
 
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<ProjectForm>(EMPTY_FORM);
@@ -34,8 +34,10 @@ export default function Roadmap() {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const visibleMonths = view === 'year' ? MONTHS : MONTHS.slice(3, 7);
-  const startOffset = view === 'year' ? 0 : 3;
+  // Q2 = Apr(3), May(4), Jun(5)
+  const Q_START = 3; const Q_END = 5;
+  const visibleMonths = view === 'year' ? MONTHS : MONTHS.slice(Q_START, Q_END + 1);
+  const startOffset = view === 'year' ? 0 : Q_START;
   const totalMonths = visibleMonths.length;
 
   function getBarStyle(p: RoadmapProject) {
@@ -98,8 +100,8 @@ export default function Roadmap() {
       {/* VIEW TOGGLE */}
       <div className="px-4 mt-2">
         <div className="tab-switcher">
-          <button className={`tab-btn ${view === 'year' ? 'active' : ''}`} onClick={() => setView('year')}>📅 Full Year</button>
           <button className={`tab-btn ${view === 'q' ? 'active' : ''}`} onClick={() => setView('q')}>🎯 Q2 Focus</button>
+          <button className={`tab-btn ${view === 'year' ? 'active' : ''}`} onClick={() => setView('year')}>📅 Full Year</button>
         </div>
       </div>
 
@@ -110,9 +112,13 @@ export default function Roadmap() {
           <div className="w-28 shrink-0 px-3 py-2 text-[10px] font-bold text-[var(--muted-foreground)] uppercase">Project</div>
           <div className="flex-1 flex">
             {visibleMonths.map((m, i) => {
-              const isToday = i + startOffset === TODAY_MONTH;
+              const absMonth = i + startOffset;
+              const isToday = absMonth === TODAY_MONTH;
+              const isPast = absMonth < TODAY_MONTH;
               return (
-                <div key={i} className={`flex-1 text-center py-2 text-[10px] font-semibold ${isToday ? 'text-[var(--sky)] font-bold' : 'text-[var(--muted-foreground)]'}`}>
+                <div key={i} className={`flex-1 text-center py-2 text-[10px] font-semibold ${
+                  isToday ? 'text-[var(--sky)] font-bold' : isPast ? 'text-[var(--muted-foreground)] opacity-40' : 'text-[var(--muted-foreground)]'
+                }`}>
                   {m}
                 </div>
               );
@@ -167,8 +173,11 @@ export default function Roadmap() {
               <div className="w-16 shrink-0 flex items-center justify-end gap-1 pr-2">
                 <button
                   onClick={() => openEdit(p)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all text-sm"
-                >✏️</button>
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all"
+                  title="Edit project"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
                 <button
                   onClick={() => setDeleteId(p.id)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-base leading-none"

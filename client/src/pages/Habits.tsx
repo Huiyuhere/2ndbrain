@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getTodayString } from '@/lib/store';
+import { getTodayString, toLocalDateStr } from '@/lib/store';
 import GoalBanner from '@/components/GoalBanner';
 import { toast } from 'sonner';
 
@@ -8,10 +8,19 @@ const DAYS_SHORT = ['M','T','W','T','F','S','S'];
 
 function getLastNDays(n: number): string[] {
   return Array.from({ length: n }, (_, i) => {
-    const d = new Date(2026, 4, 31);
+    const d = new Date();
     d.setDate(d.getDate() - (n - 1 - i));
-    return d.toISOString().split('T')[0];
+    return toLocalDateStr(d);
   });
+}
+
+function getWeekLabel(dates: string[]): string {
+  if (!dates.length) return '';
+  const fmt = (s: string) => {
+    const d = new Date(s + 'T12:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  return `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])}`;
 }
 
 const EMOJI_OPTIONS = ['⏰','🏃','✍️','📚','🧘','📵','💧','🥗','🌅','💪','🎯','🧠','🌿','🎨','🎵'];
@@ -27,11 +36,10 @@ export default function Habits() {
 
   function getStreak(completedDates: string[]): number {
     let streak = 0;
-    const ref = new Date(2026, 4, 31);
     for (let i = 0; i < 30; i++) {
-      const d = new Date(ref);
-      d.setDate(ref.getDate() - i);
-      const ds = d.toISOString().split('T')[0];
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = toLocalDateStr(d);
       if (completedDates.includes(ds)) streak++;
       else if (i > 0) break;
     }
@@ -70,7 +78,7 @@ export default function Habits() {
       <div className="topbar">
         <div>
           <div className="topbar-title">🔥 Habits</div>
-          <div className="topbar-sub">Week of 25–31 May 2026</div>
+          <div className="topbar-sub">{getWeekLabel(last7)}</div>
         </div>
         <button
           onClick={() => setAddingHabit(true)}
@@ -160,7 +168,7 @@ export default function Habits() {
                     <button
                       key={i}
                       onClick={() => toggleHabit(h.id, d)}
-                      className={`w-9 h-9 rounded-lg mx-0.5 flex items-center justify-center text-xs font-bold transition-all ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
                         done
                           ? 'text-white shadow-sm'
                           : isToday

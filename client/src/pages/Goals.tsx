@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Goal } from '@/lib/store';
 import { toast } from 'sonner';
@@ -11,9 +11,10 @@ type GoalForm = { title: string; emoji: string; target: string; current: string;
 const EMPTY_FORM: GoalForm = { title: '', emoji: '🎯', target: '', current: '', progress: 0 };
 
 export default function Goals() {
-  const { state, updateQuarterlyGoal, addGoal, updateGoal, deleteGoal } = useApp();
-  const [monthlyIntention, setMonthlyIntention] = useState('Build the Type platform MVP and hit 100 sign-ups.');
+  const { state, updateQuarterlyGoal, addGoal, updateGoal, deleteGoal, updateMonthlyIntention } = useApp();
+  const monthlyIntention = state.monthlyIntention || 'Build the Type platform MVP and hit 100 sign-ups.';
   const [editingMonthly, setEditingMonthly] = useState(false);
+  const [localMonthly, setLocalMonthly] = useState(monthlyIntention);
   const [editingQGoal, setEditingQGoal] = useState(false);
   const [qGoalText, setQGoalText] = useState(state.quarterlyGoal.text);
   const [qProgress, setQProgress] = useState(state.quarterlyGoal.progress);
@@ -132,7 +133,11 @@ export default function Goals() {
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-semibold text-[var(--foreground)]">🌙 May Intention</p>
           <button
-            onClick={() => { if (editingMonthly) toast.success('Intention saved!'); setEditingMonthly(e => !e); }}
+            onClick={() => {
+              if (editingMonthly) { updateMonthlyIntention(localMonthly); toast.success('Intention saved!'); }
+              else { setLocalMonthly(monthlyIntention); }
+              setEditingMonthly(e => !e);
+            }}
             className="text-xs text-[var(--sky)] font-medium"
           >
             {editingMonthly ? '✓ Save' : '✏️ Edit'}
@@ -142,8 +147,8 @@ export default function Goals() {
           <textarea
             className="input-field resize-none"
             rows={2}
-            value={monthlyIntention}
-            onChange={e => setMonthlyIntention(e.target.value)}
+            value={localMonthly}
+            onChange={e => setLocalMonthly(e.target.value)}
           />
         ) : (
           <p className="text-sm text-[var(--foreground)] font-['Playfair_Display'] italic leading-relaxed">{monthlyIntention}</p>
@@ -166,8 +171,11 @@ export default function Goals() {
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => openEdit(g)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all text-sm"
-                    >✏️</button>
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all"
+                      title="Edit goal"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
                     <button
                       onClick={() => setDeleteId(g.id)}
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-sm"
@@ -263,6 +271,20 @@ function GoalModal({ title, form, setForm, onSave, onClose, saveLabel }: {
   saveLabel: string;
 }) {
   const EMOJI_OPTIONS = ['🎯','🚀','📱','📚','💪','🌐','🧠','💡','🏆','🎨','🌿','💰','🏃','✍️','🎵'];
+  // Auto-calculate progress from numerical current/target
+  useEffect(() => {
+    const cur = parseFloat((form.current || '').replace(/[^0-9.]/g, ''));
+    const tgt = parseFloat((form.target || '').replace(/[^0-9.]/g, ''));
+    if (!isNaN(cur) && !isNaN(tgt) && tgt > 0) {
+      const auto = Math.min(100, Math.round((cur / tgt) * 100));
+      setForm(f => f.progress !== auto ? { ...f, progress: auto } : f);
+    }
+  }, [form.current, form.target]);
+  const isAutoCalc = (() => {
+    const cur = parseFloat((form.current || '').replace(/[^0-9.]/g, ''));
+    const tgt = parseFloat((form.target || '').replace(/[^0-9.]/g, ''));
+    return !isNaN(cur) && !isNaN(tgt) && tgt > 0;
+  })();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -303,7 +325,14 @@ function GoalModal({ title, form, setForm, onSave, onClose, saveLabel }: {
         </div>
 
         <div className="mb-6">
-          <p className="text-sm font-semibold mb-1">Progress: {form.progress}%</p>
+          <p className="text-sm font-semibold mb-1">
+            Progress: {form.progress}%
+            {(() => {
+              const cur = parseFloat((form.current || '').replace(/[^0-9.]/g, ''));
+              const tgt = parseFloat((form.target || '').replace(/[^0-9.]/g, ''));
+              return (!isNaN(cur) && !isNaN(tgt) && tgt > 0) ? <span className="text-[10px] text-[var(--muted-foreground)] ml-1 font-normal">(auto-calculated)</span> : null;
+            })()}
+          </p>
           <input
             type="range" min={0} max={100} value={form.progress}
             onChange={e => setForm(f => ({ ...f, progress: Number(e.target.value) }))}

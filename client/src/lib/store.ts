@@ -67,6 +67,12 @@ export type Reflection = {
   answers: Record<string, string>;
 };
 
+export type UserProfile = {
+  name: string;
+  bio: string;
+  avatarUrl: string;
+};
+
 export type RoadmapProject = {
   id: string;
   name: string;
@@ -79,6 +85,7 @@ export type RoadmapProject = {
 };
 
 export type AppState = {
+  userProfile: UserProfile;
   focusMode: 'life' | 'work' | 'personal';
   categories: Category[];
   tasks: Task[];
@@ -91,6 +98,7 @@ export type AppState = {
   quarterlyGoal: { text: string; progress: number; daysLeft: number };
   checkinDone: boolean; // for today
   streak: number;
+  monthlyIntention: string;
 };
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -161,6 +169,7 @@ const DEFAULT_ROADMAP_PROJECTS: RoadmapProject[] = [
 
 function getDefaultState(): AppState {
   return {
+    userProfile: { name: 'TH', bio: 'Building the future, one day at a time.', avatarUrl: '' },
     focusMode: 'life',
     categories: DEFAULT_CATEGORIES,
     tasks: DEFAULT_TASKS,
@@ -173,6 +182,7 @@ function getDefaultState(): AppState {
     quarterlyGoal: { text: 'Build & launch Type — the modern speed dating platform.', progress: 58, daysLeft: 29 },
     checkinDone: false,
     streak: 7,
+    monthlyIntention: 'Build the Type platform MVP and hit 100 sign-ups.',
   };
 }
 

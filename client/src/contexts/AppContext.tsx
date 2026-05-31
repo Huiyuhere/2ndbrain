@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection, Category, RoadmapProject, loadState, saveState, getTodayString, autoClassify } from '@/lib/store';
+import { AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection, Category, RoadmapProject, UserProfile, loadState, saveState, getTodayString, autoClassify } from '@/lib/store';
 import { nanoid } from 'nanoid';
 
 type AppContextType = {
@@ -24,6 +24,8 @@ type AppContextType = {
   addProject: (project: Omit<RoadmapProject, 'id'>) => void;
   updateProject: (id: string, updates: Partial<RoadmapProject>) => void;
   deleteProject: (id: string) => void;
+  updateProfile: (updates: Partial<UserProfile>) => void;
+  updateMonthlyIntention: (text: string) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -154,12 +156,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, roadmapProjects: (s.roadmapProjects || []).filter(p => p.id !== id) }));
   }, []);
 
+  const updateProfile = useCallback((updates: Partial<UserProfile>) => {
+    setState(s => ({ ...s, userProfile: { ...s.userProfile, ...updates } }));
+  }, []);
+
+  const updateMonthlyIntention = useCallback((text: string) => {
+    setState(s => ({ ...s, monthlyIntention: text }));
+  }, []);
+
   return (
     <AppContext.Provider value={{
       state, setFocusMode, addTask, updateTask, deleteTask, moveTask,
         toggleHabit, saveMoodEntry, saveEveningEntry, saveReflection, updateGoal, markCheckinDone,
         updateCategories, updateQuarterlyGoal,
         addHabit, deleteHabit, addGoal, deleteGoal, addProject, updateProject, deleteProject,
+        updateProfile, updateMonthlyIntention,
     }}>
       {children}
     </AppContext.Provider>

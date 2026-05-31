@@ -18,6 +18,8 @@ import Analytics from "./pages/Analytics";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import More from "./pages/More";
+import Profile from "./pages/Profile";
+import JournalViewer from "./pages/JournalViewer";
 import NotFound from "./pages/NotFound";
 
 function AppLayout() {
@@ -37,6 +39,8 @@ function AppLayout() {
           <Route path="/goals"       component={Goals} />
           <Route path="/settings"    component={Settings} />
           <Route path="/more"        component={More} />
+          <Route path="/profile"      component={Profile} />
+          <Route path="/journal"      component={JournalViewer} />
           <Route component={NotFound} />
         </Switch>
       </main>
