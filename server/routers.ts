@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
+  bulkInsertHabitCompletions,
   deleteGoal,
   deleteHabit,
   deleteRoadmapProject,
@@ -368,6 +369,98 @@ export const appRouter = router({
 
   // ─── Bulk sync (load everything at once) ─────────────────────────────────────
   sync: router({
+    // One-shot import from legacy localStorage snapshot
+    importLegacy: protectedProcedure
+      .input(z.object({
+        categories: z.array(CategorySchema).optional(),
+        tasks: z.array(TaskSchema).optional(),
+        habits: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          emoji: z.string(),
+          completedDates: z.array(z.string()).optional(),
+        })).optional(),
+        goals: z.array(GoalSchema).optional(),
+        roadmapProjects: z.array(RoadmapProjectSchema).optional(),
+        moodEntries: z.array(MoodEntrySchema).optional(),
+        eveningEntries: z.array(EveningEntrySchema).optional(),
+        reflections: z.array(ReflectionSchema).optional(),
+        profile: z.object({
+          name: z.string().optional(),
+          bio: z.string().optional(),
+          focusMode: z.enum(['life', 'work', 'personal']).optional(),
+          monthlyIntention: z.string().optional(),
+          quarterlyGoalText: z.string().optional(),
+          quarterlyGoalProgress: z.number().optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = ctx.user.id;
+        if (input.profile) await updateProfile(userId, input.profile);
+        if (input.categories?.length) {
+          await upsertCategories(userId, input.categories.map((c, i) => ({
+            id: c.id, userId, name: c.name, emoji: c.emoji,
+            bgColor: c.bgColor, textColor: c.textColor,
+            keywords: c.keywords ?? [], sortOrder: c.sortOrder ?? i,
+          })));
+        }
+        for (const t of input.tasks ?? []) {
+          await upsertTask(userId, {
+            id: t.id, userId, title: t.title, categoryId: t.categoryId,
+            column: t.column, duration: t.duration ?? null,
+            scheduledTime: t.scheduledTime ?? null, scheduledDate: t.scheduledDate ?? null,
+            subtasks: t.subtasks ?? null, links: t.links ?? null,
+            notes: t.notes ?? null, createdAt: t.createdAt,
+            completedAt: t.completedAt ?? null,
+          });
+        }
+        const completionRows: { habitId: string; date: string }[] = [];
+        for (const h of input.habits ?? []) {
+          await upsertHabit(userId, { id: h.id, userId, name: h.name, emoji: h.emoji, sortOrder: 0 });
+          for (const date of h.completedDates ?? []) completionRows.push({ habitId: h.id, date });
+        }
+        await bulkInsertHabitCompletions(userId, completionRows);
+        for (const g of input.goals ?? []) {
+          await upsertGoal(userId, {
+            id: g.id, userId, title: g.title, categoryId: g.categoryId,
+            progress: g.progress ?? 0, current: g.current ?? null,
+            target: g.target ?? null, dueDate: g.dueDate ?? null,
+            done: g.done ?? false, sortOrder: g.sortOrder ?? 0,
+          });
+        }
+        for (const p of input.roadmapProjects ?? []) {
+          await upsertRoadmapProject(userId, {
+            id: p.id, userId, name: p.name, emoji: p.emoji, color: p.color,
+            startMonth: p.startMonth, endMonth: p.endMonth,
+            progress: p.progress ?? 0, milestones: p.milestones ?? null,
+            goalType: p.goalType ?? 'milestone',
+            targetValue: p.targetValue ?? null, currentValue: p.currentValue ?? null,
+            sortOrder: p.sortOrder ?? 0,
+          });
+        }
+        for (const m of input.moodEntries ?? []) {
+          await upsertMoodEntry(userId, {
+            userId, date: m.date, mood: m.mood, sleep: m.sleep,
+            intention: m.intention ?? null, focus: m.focus ?? null,
+          });
+        }
+        for (const e of input.eveningEntries ?? []) {
+          await upsertEveningEntry(userId, {
+            userId, date: e.date, location: e.location ?? null,
+            title: e.title ?? null, rating: e.rating ?? null,
+            highlights: e.highlights ?? null, freeWrite: e.freeWrite ?? null,
+            photoUrl: e.photoUrl ?? null,
+          });
+        }
+        for (const r of input.reflections ?? []) {
+          await upsertReflection(userId, {
+            id: r.id, userId, type: r.type, date: r.date,
+            answers: (r.answers ?? null) as Record<string, string> | null,
+          });
+        }
+        return { success: true };
+      }),
+
     loadAll: protectedProcedure.query(async ({ ctx }) => {
       const userId = ctx.user.id;
       const [profile, cats, taskList, habitData, goalList, roadmapList, moodList, eveningList, reflectionList] =

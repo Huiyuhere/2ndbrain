@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import BackButton from '@/components/BackButton';
 
@@ -10,9 +11,21 @@ const COLOUR_OPTIONS = [
 
 const EMOJI_OPTIONS = ['💼','💡','🌸','📚','🏃','🧠','🌐','🎯','💎','🔥','⚡','🎨'];
 
+const LEGACY_KEY = '2nd-brain-state';
+
 export default function Settings() {
   const { state, updateCategories } = useApp();
+  const utils = trpc.useUtils();
+  const importMutation = trpc.sync.importLegacy.useMutation({
+    onSuccess: () => {
+      utils.sync.loadAll.invalidate();
+      toast.success('Data imported successfully! Refreshing...');
+      setTimeout(() => window.location.reload(), 1200);
+    },
+    onError: (err) => toast.error(`Import failed: ${err.message}`),
+  });
   const [categories, setCategories] = useState(state.categories);
+  const [importDone, setImportDone] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newCat, setNewCat] = useState({ name: '', emoji: '💡', color: '#2E86C1' });
   const [addingCat, setAddingCat] = useState(false);
@@ -36,6 +49,38 @@ export default function Settings() {
     setCategories(updated);
     updateCategories(updated);
     toast.success('Category deleted');
+  }
+
+  function handleImport() {
+    try {
+      const raw = localStorage.getItem(LEGACY_KEY);
+      if (!raw) {
+        toast.error('No local data found on this device.');
+        return;
+      }
+      const legacy = JSON.parse(raw);
+      importMutation.mutate({
+        profile: {
+          name: legacy.userProfile?.name,
+          bio: legacy.userProfile?.bio,
+          focusMode: legacy.focusMode,
+          monthlyIntention: legacy.monthlyIntention,
+          quarterlyGoalText: legacy.quarterlyGoal?.text,
+          quarterlyGoalProgress: legacy.quarterlyGoal?.progress,
+        },
+        categories: legacy.categories,
+        tasks: legacy.tasks,
+        habits: legacy.habits,
+        goals: legacy.goals,
+        roadmapProjects: legacy.roadmapProjects,
+        moodEntries: legacy.moodEntries,
+        eveningEntries: legacy.eveningEntries,
+        reflections: legacy.reflections,
+      });
+      setImportDone(true);
+    } catch (e) {
+      toast.error('Could not read local data. It may be corrupted.');
+    }
   }
 
   function addCategory() {
@@ -196,6 +241,37 @@ export default function Settings() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* IMPORT FROM DEVICE */}
+      <div className="section-hdr mt-5">
+        <div className="section-hdr-title">📦 Data Import</div>
+      </div>
+      <div className="px-4">
+        <div className="p-4 rounded-2xl border border-[var(--border)] bg-white">
+          <p className="text-sm font-semibold text-[var(--foreground)] mb-1">Import from this device</p>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3 leading-relaxed">
+            Copies all tasks, habits, goals, roadmap, journal entries, and reflections stored locally on this browser into your account database. Existing data is preserved — nothing is overwritten.
+          </p>
+          {importDone ? (
+            <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Import complete!
+            </div>
+          ) : (
+            <button
+              onClick={handleImport}
+              disabled={importMutation.isPending}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white btn-sky disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {importMutation.isPending ? (
+                <><svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" strokeOpacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Importing...</>
+              ) : (
+                <>📥 Import from this device</>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ABOUT */}

@@ -270,6 +270,33 @@ export async function upsertEveningEntry(userId: number, entry: typeof eveningEn
   await db.insert(eveningEntries).values({ ...entry, userId });
 }
 
+// ─── Bulk habit completions (for import) ─────────────────────────────────────
+
+export async function bulkInsertHabitCompletions(
+  userId: number,
+  rows: { habitId: string; date: string }[]
+) {
+  const db = await getDb();
+  if (!db || rows.length === 0) return;
+  // Insert ignore duplicates
+  for (const row of rows) {
+    const existing = await db
+      .select()
+      .from(habitCompletions)
+      .where(
+        and(
+          eq(habitCompletions.habitId, row.habitId),
+          eq(habitCompletions.userId, userId),
+          eq(habitCompletions.date, row.date)
+        )
+      )
+      .limit(1);
+    if (!existing[0]) {
+      await db.insert(habitCompletions).values({ habitId: row.habitId, userId, date: row.date });
+    }
+  }
+}
+
 // ─── Reflections ──────────────────────────────────────────────────────────────
 
 export async function getReflections(userId: number) {
