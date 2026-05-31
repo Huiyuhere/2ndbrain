@@ -10,3 +10,11 @@
 - [x] Add login gate in App.tsx for unauthenticated users
 - [x] Add loading state while data syncs from DB
 - [x] Write and pass vitest tests for all routers (18 tests passing)
+
+## Shared Workspace
+- [x] Replace per-user data isolation with a single shared workspace (all authenticated users read/write the owner's data)
+- [x] Add workspaceOwnerId to tRPC context, resolved from OWNER_OPEN_ID env var with 60s retry cache
+- [x] Update all 25 tRPC data procedures to use workspaceOwnerId instead of ctx.user.id
+- [x] Add workspaceProcedure middleware that guards all data routes
+- [x] Keep auth gate (must be signed in to access), but remove per-user data partitioning
+- [x] Update all 18 vitest tests to reflect shared workspace model (all pass)

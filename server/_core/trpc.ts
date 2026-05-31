@@ -27,6 +27,21 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
+/** Ensures the workspace owner ID is resolved; throws a clear error if the owner hasn't signed in yet */
+const requireWorkspace = t.middleware(async opts => {
+  const { ctx, next } = opts;
+  if (!ctx.workspaceOwnerId) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Workspace not ready — please sign in as the owner first.",
+    });
+  }
+  return next({ ctx: { ...ctx, workspaceOwnerId: ctx.workspaceOwnerId } });
+});
+
+/** Use this for all data procedures — requires auth AND workspace to be resolved */
+export const workspaceProcedure = t.procedure.use(requireUser).use(requireWorkspace);
+
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router, workspaceProcedure } from "./_core/trpc";
 import {
   bulkInsertHabitCompletions,
   deleteGoal,
@@ -137,10 +137,10 @@ export const appRouter = router({
 
   // ─── Profile ────────────────────────────────────────────────────────────────
   profile: router({
-    get: protectedProcedure.query(async ({ ctx }) => {
-      return getOrCreateProfile(ctx.user.id);
+    get: workspaceProcedure.query(async ({ ctx }) => {
+      return getOrCreateProfile(ctx.workspaceOwnerId!);
     }),
-    update: protectedProcedure
+    update: workspaceProcedure
       .input(z.object({
         name: z.string().optional(),
         bio: z.string().optional(),
@@ -152,22 +152,22 @@ export const appRouter = router({
         quarterlyGoalProgress: z.number().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        await updateProfile(ctx.user.id, input);
+        await updateProfile(ctx.workspaceOwnerId!, input);
         return { success: true };
       }),
   }),
 
   // ─── Categories ─────────────────────────────────────────────────────────────
   categories: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getCategories(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getCategories(ctx.workspaceOwnerId!);
     }),
-    setAll: protectedProcedure
+    setAll: workspaceProcedure
       .input(z.array(CategorySchema))
       .mutation(async ({ ctx, input }) => {
-        await upsertCategories(ctx.user.id, input.map(c => ({
+        await upsertCategories(ctx.workspaceOwnerId!, input.map(c => ({
           id: c.id,
-          userId: ctx.user.id,
+          userId: ctx.workspaceOwnerId!,
           name: c.name,
           emoji: c.emoji,
           bgColor: c.bgColor,
@@ -181,15 +181,15 @@ export const appRouter = router({
 
   // ─── Tasks ──────────────────────────────────────────────────────────────────
   tasks: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getTasks(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getTasks(ctx.workspaceOwnerId!);
     }),
-    upsert: protectedProcedure
+    upsert: workspaceProcedure
       .input(TaskSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertTask(ctx.user.id, {
+        await upsertTask(ctx.workspaceOwnerId!, {
           id: input.id,
-          userId: ctx.user.id,
+          userId: ctx.workspaceOwnerId!,
           title: input.title,
           categoryId: input.categoryId,
           column: input.column,
@@ -204,56 +204,56 @@ export const appRouter = router({
         });
         return { success: true };
       }),
-    delete: protectedProcedure
+    delete: workspaceProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await deleteTask(ctx.user.id, input.id);
+        await deleteTask(ctx.workspaceOwnerId!, input.id);
         return { success: true };
       }),
   }),
 
   // ─── Habits ─────────────────────────────────────────────────────────────────
   habits: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getHabits(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getHabits(ctx.workspaceOwnerId!);
     }),
-    upsert: protectedProcedure
+    upsert: workspaceProcedure
       .input(HabitSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertHabit(ctx.user.id, {
+        await upsertHabit(ctx.workspaceOwnerId!, {
           id: input.id,
-          userId: ctx.user.id,
+          userId: ctx.workspaceOwnerId!,
           name: input.name,
           emoji: input.emoji,
           sortOrder: input.sortOrder ?? 0,
         });
         return { success: true };
       }),
-    delete: protectedProcedure
+    delete: workspaceProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await deleteHabit(ctx.user.id, input.id);
+        await deleteHabit(ctx.workspaceOwnerId!, input.id);
         return { success: true };
       }),
-    toggle: protectedProcedure
+    toggle: workspaceProcedure
       .input(z.object({ habitId: z.string(), date: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        const checked = await toggleHabitCompletion(ctx.user.id, input.habitId, input.date);
+        const checked = await toggleHabitCompletion(ctx.workspaceOwnerId!, input.habitId, input.date);
         return { checked };
       }),
   }),
 
   // ─── Goals ──────────────────────────────────────────────────────────────────
   goals: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getGoals(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getGoals(ctx.workspaceOwnerId!);
     }),
-    upsert: protectedProcedure
+    upsert: workspaceProcedure
       .input(GoalSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertGoal(ctx.user.id, {
+        await upsertGoal(ctx.workspaceOwnerId!, {
           id: input.id,
-          userId: ctx.user.id,
+          userId: ctx.workspaceOwnerId!,
           title: input.title,
           categoryId: input.categoryId,
           progress: input.progress,
@@ -265,25 +265,25 @@ export const appRouter = router({
         });
         return { success: true };
       }),
-    delete: protectedProcedure
+    delete: workspaceProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await deleteGoal(ctx.user.id, input.id);
+        await deleteGoal(ctx.workspaceOwnerId!, input.id);
         return { success: true };
       }),
   }),
 
   // ─── Roadmap ─────────────────────────────────────────────────────────────────
   roadmap: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getRoadmapProjects(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getRoadmapProjects(ctx.workspaceOwnerId!);
     }),
-    upsert: protectedProcedure
+    upsert: workspaceProcedure
       .input(RoadmapProjectSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertRoadmapProject(ctx.user.id, {
+        await upsertRoadmapProject(ctx.workspaceOwnerId!, {
           id: input.id,
-          userId: ctx.user.id,
+          userId: ctx.workspaceOwnerId!,
           name: input.name,
           emoji: input.emoji,
           color: input.color,
@@ -298,24 +298,24 @@ export const appRouter = router({
         });
         return { success: true };
       }),
-    delete: protectedProcedure
+    delete: workspaceProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await deleteRoadmapProject(ctx.user.id, input.id);
+        await deleteRoadmapProject(ctx.workspaceOwnerId!, input.id);
         return { success: true };
       }),
   }),
 
   // ─── Mood / Morning check-in ─────────────────────────────────────────────────
   mood: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getMoodEntries(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getMoodEntries(ctx.workspaceOwnerId!);
     }),
-    save: protectedProcedure
+    save: workspaceProcedure
       .input(MoodEntrySchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertMoodEntry(ctx.user.id, {
-          userId: ctx.user.id,
+        await upsertMoodEntry(ctx.workspaceOwnerId!, {
+          userId: ctx.workspaceOwnerId!,
           date: input.date,
           mood: input.mood,
           sleep: input.sleep,
@@ -328,14 +328,14 @@ export const appRouter = router({
 
   // ─── Evening Journal ─────────────────────────────────────────────────────────
   evening: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getEveningEntries(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getEveningEntries(ctx.workspaceOwnerId!);
     }),
-    save: protectedProcedure
+    save: workspaceProcedure
       .input(EveningEntrySchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertEveningEntry(ctx.user.id, {
-          userId: ctx.user.id,
+        await upsertEveningEntry(ctx.workspaceOwnerId!, {
+          userId: ctx.workspaceOwnerId!,
           date: input.date,
           location: input.location ?? null,
           title: input.title ?? null,
@@ -350,15 +350,15 @@ export const appRouter = router({
 
   // ─── Reflections ─────────────────────────────────────────────────────────────
   reflections: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return getReflections(ctx.user.id);
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getReflections(ctx.workspaceOwnerId!);
     }),
-    save: protectedProcedure
+    save: workspaceProcedure
       .input(ReflectionSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertReflection(ctx.user.id, {
+        await upsertReflection(ctx.workspaceOwnerId!, {
           id: input.id,
-          userId: ctx.user.id,
+          userId: ctx.workspaceOwnerId!,
           type: input.type,
           date: input.date,
           answers: (input.answers ?? null) as Record<string, string> | null,
@@ -370,7 +370,7 @@ export const appRouter = router({
   // ─── Bulk sync (load everything at once) ─────────────────────────────────────
   sync: router({
     // One-shot import from legacy localStorage snapshot
-    importLegacy: protectedProcedure
+    importLegacy: workspaceProcedure
       .input(z.object({
         categories: z.array(CategorySchema).optional(),
         tasks: z.array(TaskSchema).optional(),
@@ -395,7 +395,7 @@ export const appRouter = router({
         }).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const userId = ctx.user.id;
+        const userId = ctx.workspaceOwnerId!;
         if (input.profile) await updateProfile(userId, input.profile);
         if (input.categories?.length) {
           await upsertCategories(userId, input.categories.map((c, i) => ({
@@ -461,8 +461,8 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    loadAll: protectedProcedure.query(async ({ ctx }) => {
-      const userId = ctx.user.id;
+    loadAll: workspaceProcedure.query(async ({ ctx }) => {
+      const userId = ctx.workspaceOwnerId!;
       const [profile, cats, taskList, habitData, goalList, roadmapList, moodList, eveningList, reflectionList] =
         await Promise.all([
           getOrCreateProfile(userId),
