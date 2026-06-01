@@ -3,6 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import BackButton from '@/components/BackButton';
+import { useLocation } from 'wouter';
 
 const COLOUR_OPTIONS = [
   '#2E86C1','#5DADE2','#F0B429','#4A7C59','#C4A882','#C0392B',
@@ -15,6 +16,7 @@ const LEGACY_KEY = '2nd-brain-state';
 
 export default function Settings() {
   const { state, updateCategories } = useApp();
+  const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const importMutation = trpc.sync.importLegacy.useMutation({
     onSuccess: () => {
@@ -109,7 +111,12 @@ export default function Settings() {
       </div>
 
       {/* PROFILE */}
-      <div className="mx-4 mt-3 p-4 rounded-2xl border border-[var(--border)] bg-white flex items-center gap-4">
+      <div
+        className="mx-4 mt-3 p-4 rounded-2xl border border-[var(--border)] bg-white flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform hover:border-[var(--sky)]/40"
+        onClick={() => setLocation('/profile')}
+        role="button"
+        aria-label="Edit profile"
+      >
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>TH</div>
         <div>
           <p className="font-semibold text-[var(--foreground)]">TH</p>

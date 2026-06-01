@@ -60,3 +60,11 @@
 - [x] Green dot indicator on pills that already have an entry
 - [x] GoalBanner / streak / morning check-in modal logic untouched (today-only)
 - [x] TypeScript: 0 errors. All 18 vitest tests still pass.
+
+## GitHub sync (Huiyuhere/2ndbrain → current project)
+- [x] Profile.tsx: full avatar upload UX — file picker, preview, upload spinner, 5 MB limit, char counters, autoFocus
+- [x] Settings.tsx: profile card is now clickable and navigates to /profile
+- [x] server/routers.ts: uploadAvatar mutation (base64 → S3 → updateProfile)
+- [x] server/db.ts: deleteMoodEntry() helper added
+- [x] drizzle migration 0001: JSON column types already applied in DB; migration file + journal synced
+- [x] TypeScript clean, 18/18 tests pass

@@ -258,6 +258,12 @@ export async function upsertMoodEntry(userId: number, entry: typeof moodEntries.
   await db.insert(moodEntries).values({ ...entry, userId });
 }
 
+export async function deleteMoodEntry(userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(moodEntries).where(and(eq(moodEntries.userId, userId), eq(moodEntries.date, date)));
+}
+
 // ─── Evening Entries ──────────────────────────────────────────────────────────
 
 export async function getEveningEntries(userId: number) {
