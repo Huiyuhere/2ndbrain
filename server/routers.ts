@@ -631,6 +631,7 @@ export const appRouter = router({
         title: z.string(),
         date: z.string(),
         reached: z.boolean().optional(),
+        taskId: z.string().nullable().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await upsertProjectMilestone(ctx.workspaceOwnerId!, {
@@ -640,6 +641,7 @@ export const appRouter = router({
           title: input.title,
           date: input.date,
           reached: input.reached ?? false,
+          taskId: input.taskId ?? null,
         });
         return { success: true };
       }),

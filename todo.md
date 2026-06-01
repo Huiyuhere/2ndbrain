@@ -102,3 +102,15 @@
 - [x] Use pencil/trash icons (same as Roadmap) for edit/delete in Projects
 - [x] Fix today's date to use SGT (UTC+8) — getTodayString, getWeekDates, getStreak, Projects today() all use UTC+8 offset
 - [x] TypeScript clean, 18/18 tests pass
+
+## Gantt Chart Improvements
+- [x] Sort task rows by earliest dueDate ascending (earliest at top)
+- [x] SVG dependency arrows between tasks that have dependsOn links (dashed curved lines + arrowheads)
+- [x] Add taskId FK to project_milestones schema (nullable) + db:push
+- [x] Milestone with taskId shown inline on that task's row (diamond + label below bar)
+- [x] Milestone without taskId stays in the standalone Milestones row
+- [x] Update add milestone modal to optionally pick a linked task
+- [x] Date tick header (6 evenly-spaced labels across project window)
+- [x] Progress bar below Gantt aligned with timeline column
+- [x] Completed projects collapsed under a <details> toggle
+- [x] TypeScript clean, 18/18 tests pass

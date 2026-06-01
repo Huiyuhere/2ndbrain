@@ -1,7 +1,7 @@
-// Projects — Gantt chart with tasks, milestones, board auto-linking
+// Projects — Gantt chart with task bars, dependency arrows, inline milestones
 // Max 3 active projects, 2-month cap per project
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useApp } from '@/contexts/AppContext';
 import { nanoid } from 'nanoid';
@@ -40,6 +40,7 @@ type Milestone = {
   title: string;
   date: string;
   reached: boolean;
+  taskId?: string | null;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -48,28 +49,26 @@ const COLOR_OPTIONS = ['#2E86C1','#F0B429','#4A7C59','#C4A882','#C0392B','#6B5EA
 const EMOJI_OPTIONS = ['📁','🚀','💎','📱','🌐','🧠','🎯','📚','💪','🎨','🌿','💰','🏆','⚡','🔥'];
 const TASK_COLORS = ['#2E86C1','#F0B429','#4A7C59','#C4A882','#C0392B','#6B5EA8','#E67E22'];
 
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().split('T')[0];
 }
 
 function daysBetween(a: string, b: string): number {
-  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+  return Math.round(
+    (new Date(b + 'T00:00:00Z').getTime() - new Date(a + 'T00:00:00Z').getTime()) / 86400000
+  );
 }
 
 function formatDateShort(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-SG', { month: 'short', day: 'numeric' });
-}
-
-function formatDateFull(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-SG', { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = new Date(dateStr + 'T00:00:00Z');
+  return d.toLocaleDateString('en-SG', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 function today(): string {
-  // Use SGT (UTC+8) so the date matches the user's timezone
   const now = new Date();
   const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   return sgt.toISOString().split('T')[0];
@@ -79,105 +78,315 @@ function maxEndDate(startDate: string): string {
   return addDays(startDate, 61); // ~2 months
 }
 
-// ─── Gantt Row Component ──────────────────────────────────────────────────────
+// ─── Gantt helpers ────────────────────────────────────────────────────────────
 
-function GanttBar({
-  task,
+/** Returns [left%, width%] for a bar spanning startDate→endDate within the project window */
+function barGeometry(
+  startDate: string,
+  endDate: string,
+  projectStart: string,
+  totalDays: number
+): [number, number] {
+  const startOffset = Math.max(daysBetween(projectStart, startDate), 0);
+  const rawEnd = Math.min(daysBetween(projectStart, endDate), totalDays);
+  const clampedStart = Math.min(startOffset, totalDays);
+  const width = Math.max(rawEnd - clampedStart, 0.5);
+  return [(clampedStart / totalDays) * 100, (width / totalDays) * 100];
+}
+
+/** Centre-x% for a single date within the project window */
+function dateLeft(dateStr: string, projectStart: string, totalDays: number): number {
+  const offset = daysBetween(projectStart, dateStr);
+  return Math.max(0, Math.min((offset / totalDays) * 100, 100));
+}
+
+// ─── SVG Dependency Arrows ────────────────────────────────────────────────────
+
+type RowGeometry = {
+  taskId: string;
+  /** right edge x% of the bar (end of the "from" task) */
+  rightPct: number;
+  /** left edge x% of the bar (start of the "to" task) */
+  leftPct: number;
+  /** row index (0-based) */
+  rowIndex: number;
+};
+
+function DependencyArrows({
+  rows,
+  tasks,
   projectStart,
   totalDays,
+  rowHeight,
+}: {
+  rows: ProjectTask[];
+  tasks: ProjectTask[];
+  projectStart: string;
+  totalDays: number;
+  rowHeight: number;
+}) {
+  // Build a map of taskId → row geometry
+  const geomMap = new Map<string, RowGeometry>();
+  rows.forEach((t, i) => {
+    const [left, width] = barGeometry(t.startDate, t.dueDate, projectStart, totalDays);
+    geomMap.set(t.id, {
+      taskId: t.id,
+      rightPct: left + width,
+      leftPct: left,
+      rowIndex: i,
+    });
+  });
+
+  const arrows: React.ReactNode[] = [];
+
+  rows.forEach((toTask) => {
+    if (!toTask.dependsOn?.length) return;
+    toTask.dependsOn.forEach((fromId) => {
+      const from = geomMap.get(fromId);
+      const to = geomMap.get(toTask.id);
+      if (!from || !to) return;
+
+      // SVG coordinate space: 100 units wide, rowHeight*rows tall
+      const totalRows = rows.length;
+      const svgH = rowHeight * totalRows;
+
+      const x1 = from.rightPct; // % → we'll use viewBox 0-100
+      const y1 = (from.rowIndex + 0.5) * rowHeight;
+      const x2 = to.leftPct;
+      const y2 = (to.rowIndex + 0.5) * rowHeight;
+
+      // Elbow path: right from x1, then down/up, then right to x2
+      const midX = x1 + (x2 - x1) / 2;
+      const d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+
+      arrows.push(
+        <g key={`${fromId}-${toTask.id}`}>
+          <path
+            d={d}
+            fill="none"
+            stroke="var(--muted-foreground)"
+            strokeWidth="0.8"
+            strokeDasharray="3 2"
+            opacity="0.55"
+          />
+          {/* Arrowhead */}
+          <polygon
+            points={`${x2},${y2} ${x2 - 1.5},${y2 - 1} ${x2 - 1.5},${y2 + 1}`}
+            fill="var(--muted-foreground)"
+            opacity="0.55"
+          />
+        </g>
+      );
+    });
+  });
+
+  if (arrows.length === 0) return null;
+
+  const svgH = rowHeight * rows.length;
+
+  return (
+    <svg
+      className="absolute inset-0 pointer-events-none z-20"
+      viewBox={`0 0 100 ${svgH}`}
+      preserveAspectRatio="none"
+      style={{ width: '100%', height: '100%' }}
+    >
+      {arrows}
+    </svg>
+  );
+}
+
+// ─── Gantt Row ────────────────────────────────────────────────────────────────
+
+const ROW_HEIGHT = 44; // px per task row
+
+function GanttRow({
+  task,
+  inlineMilestones,
+  projectStart,
+  totalDays,
+  todayLeft,
+  todayVisible,
   onEdit,
   onDelete,
+  onToggleMilestone,
+  onDeleteMilestone,
   boardTaskTitle,
 }: {
   task: ProjectTask;
+  inlineMilestones: Milestone[];
   projectStart: string;
   totalDays: number;
+  todayLeft: number;
+  todayVisible: boolean;
   onEdit: (t: ProjectTask) => void;
   onDelete: (id: string) => void;
+  onToggleMilestone: (m: Milestone) => void;
+  onDeleteMilestone: (id: string) => void;
   boardTaskTitle?: string;
 }) {
-  const startOffset = Math.max(daysBetween(projectStart, task.startDate), 0);
-  const duration = Math.max(daysBetween(task.startDate, task.dueDate), 1);
-  const left = (startOffset / totalDays) * 100;
-  const width = Math.min((duration / totalDays) * 100, 100 - left);
+  const [left, width] = barGeometry(task.startDate, task.dueDate, projectStart, totalDays);
 
-  const statusAlpha = task.status === 'done' ? '99' : task.status === 'in_progress' ? 'cc' : '88';
-  const barColor = (task.color || '#2E86C1') + statusAlpha;
+  // Status styling
+  const isDone = task.status === 'done';
+  const isInProgress = task.status === 'in_progress';
+  const barBg = isDone
+    ? '#4A7C59'
+    : isInProgress
+    ? task.color ?? '#2E86C1'
+    : (task.color ?? '#2E86C1') + 'bb';
 
   return (
-    <div className="relative h-8 flex items-center">
-      {/* Bar */}
-      <div
-        className="absolute h-6 rounded-lg flex items-center px-2 cursor-pointer group"
-        style={{ left: `${left}%`, width: `${Math.max(width, 2)}%`, background: barColor, minWidth: 24 }}
-        onClick={() => onEdit(task)}
-        title={`${task.title} (${formatDateShort(task.startDate)} – ${formatDateShort(task.dueDate)})`}
-      >
-        <span className="text-white text-[10px] font-semibold truncate leading-none">
-          {task.status === 'done' ? '✓ ' : task.status === 'in_progress' ? '▶ ' : ''}{task.title}
+    <div className="flex items-center border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/20 transition-colors group/row" style={{ height: ROW_HEIGHT }}>
+      {/* Label column */}
+      <div className="w-36 shrink-0 px-3 flex flex-col justify-center gap-0.5">
+        <span className="text-xs font-semibold text-[var(--foreground)] truncate leading-tight" title={task.title}>
+          {isDone ? '✓ ' : isInProgress ? '▶ ' : ''}{task.title}
         </span>
-        {/* Delete button on hover */}
-        <button
-          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] hidden group-hover:flex items-center justify-center"
-          onClick={e => { e.stopPropagation(); onDelete(task.id); }}
-        >×</button>
+        {boardTaskTitle && (
+          <span className="text-[9px] text-[var(--muted-foreground)] truncate flex items-center gap-0.5">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            {boardTaskTitle}
+          </span>
+        )}
       </div>
-      {/* Board link badge */}
-      {boardTaskTitle && (
+
+      {/* Timeline area */}
+      <div className="flex-1 relative" style={{ height: ROW_HEIGHT }}>
+        {/* Today line */}
+        {todayVisible && (
+          <div
+            className="absolute top-0 bottom-0 w-px bg-[var(--sky)] z-10 opacity-50"
+            style={{ left: `${todayLeft}%` }}
+          />
+        )}
+
+        {/* Task bar */}
         <div
-          className="absolute text-[9px] text-[var(--muted-foreground)] truncate"
-          style={{ left: `${left}%`, top: '100%', maxWidth: `${width}%` }}
+          className="absolute top-1/2 -translate-y-1/2 h-6 rounded-full flex items-center px-2.5 cursor-pointer transition-all hover:brightness-110 hover:shadow-sm"
+          style={{
+            left: `${left}%`,
+            width: `${Math.max(width, 1.5)}%`,
+            background: barBg,
+            minWidth: 28,
+          }}
+          onClick={() => onEdit(task)}
+          title={`${task.title} · ${formatDateShort(task.startDate)} – ${formatDateShort(task.dueDate)}`}
         >
-          🔗 {boardTaskTitle}
+          <span className="text-white text-[10px] font-semibold truncate leading-none select-none">
+            {task.title}
+          </span>
         </div>
-      )}
+
+        {/* Inline milestones tied to this task */}
+        {inlineMilestones.map(m => {
+          const ml = dateLeft(m.date, projectStart, totalDays);
+          return (
+            <div
+              key={m.id}
+              className="absolute top-1/2 -translate-y-1/2 z-30 group/ms flex flex-col items-center"
+              style={{ left: `${ml}%`, transform: 'translate(-50%, -50%)' }}
+            >
+              <button
+                onClick={() => onToggleMilestone(m)}
+                title={`${m.title} · ${formatDateShort(m.date)}`}
+                className={`w-3.5 h-3.5 rotate-45 border-2 transition-all ${
+                  m.reached
+                    ? 'bg-[var(--gold)] border-[var(--gold)]'
+                    : 'bg-white border-[var(--muted-foreground)]'
+                }`}
+              />
+              <span className="absolute top-full mt-0.5 text-[8px] text-[var(--muted-foreground)] whitespace-nowrap pointer-events-none">
+                {m.title}
+              </span>
+              <button
+                className="absolute -top-2 -right-2 w-3.5 h-3.5 rounded-full bg-red-400 text-white text-[8px] hidden group-hover/ms:flex items-center justify-center z-40"
+                onClick={e => { e.stopPropagation(); onDeleteMilestone(m.id); }}
+              >×</button>
+            </div>
+          );
+        })}
+
+        {/* Edit / delete — appear on row hover */}
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity z-30">
+          <button
+            onClick={() => onEdit(task)}
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all"
+            title="Edit task"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button
+            onClick={() => onDelete(task.id)}
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-sm leading-none"
+            title="Delete task"
+          >×</button>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── Milestone Marker ─────────────────────────────────────────────────────────
+// ─── Milestones-only row (unlinked milestones) ────────────────────────────────
 
-function MilestoneMarker({
-  milestone,
+function MilestonesRow({
+  milestones,
   projectStart,
   totalDays,
+  todayLeft,
+  todayVisible,
   onToggle,
   onDelete,
 }: {
-  milestone: Milestone;
+  milestones: Milestone[];
   projectStart: string;
   totalDays: number;
+  todayLeft: number;
+  todayVisible: boolean;
   onToggle: (m: Milestone) => void;
   onDelete: (id: string) => void;
 }) {
-  const offset = daysBetween(projectStart, milestone.date);
-  if (offset < 0 || offset > totalDays) return null;
-  const left = (offset / totalDays) * 100;
-
+  if (milestones.length === 0) return null;
   return (
-    <div
-      className="absolute flex flex-col items-center group"
-      style={{ left: `${left}%`, transform: 'translateX(-50%)' }}
-    >
-      <button
-        onClick={() => onToggle(milestone)}
-        title={`${milestone.title} — ${formatDateShort(milestone.date)}`}
-        className={`w-4 h-4 rotate-45 border-2 transition-all ${
-          milestone.reached
-            ? 'bg-[var(--gold)] border-[var(--gold)]'
-            : 'bg-white border-[var(--muted-foreground)]'
-        }`}
-      />
-      <span className="text-[9px] text-[var(--muted-foreground)] mt-0.5 whitespace-nowrap">{milestone.title}</span>
-      <button
-        className="absolute -top-1 -right-3 w-3.5 h-3.5 rounded-full bg-red-400 text-white text-[8px] hidden group-hover:flex items-center justify-center"
-        onClick={e => { e.stopPropagation(); onDelete(milestone.id); }}
-      >×</button>
+    <div className="flex items-center border-b border-[var(--border)] last:border-0" style={{ height: ROW_HEIGHT }}>
+      <div className="w-36 shrink-0 px-3 text-xs text-[var(--muted-foreground)] font-medium">Milestones</div>
+      <div className="flex-1 relative" style={{ height: ROW_HEIGHT }}>
+        {todayVisible && (
+          <div className="absolute top-0 bottom-0 w-px bg-[var(--sky)] z-10 opacity-50" style={{ left: `${todayLeft}%` }} />
+        )}
+        {milestones.map(m => {
+          const ml = dateLeft(m.date, projectStart, totalDays);
+          return (
+            <div
+              key={m.id}
+              className="absolute top-1/2 -translate-y-1/2 z-20 group/ms flex flex-col items-center"
+              style={{ left: `${ml}%`, transform: 'translate(-50%, -50%)' }}
+            >
+              <button
+                onClick={() => onToggle(m)}
+                title={`${m.title} · ${formatDateShort(m.date)}`}
+                className={`w-4 h-4 rotate-45 border-2 transition-all ${
+                  m.reached
+                    ? 'bg-[var(--gold)] border-[var(--gold)]'
+                    : 'bg-white border-[var(--muted-foreground)]'
+                }`}
+              />
+              <span className="absolute top-full mt-0.5 text-[9px] text-[var(--muted-foreground)] whitespace-nowrap pointer-events-none">
+                {m.title}
+              </span>
+              <button
+                className="absolute -top-2 -right-2 w-3.5 h-3.5 rounded-full bg-red-400 text-white text-[8px] hidden group-hover/ms:flex items-center justify-center z-30"
+                onClick={e => { e.stopPropagation(); onDelete(m.id); }}
+              >×</button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-// ─── Project Card (Gantt view) ────────────────────────────────────────────────
+// ─── Project Card ─────────────────────────────────────────────────────────────
 
 function ProjectCard({
   project,
@@ -210,15 +419,31 @@ function ProjectCard({
 }) {
   const totalDays = Math.max(daysBetween(project.startDate, project.endDate), 1);
   const todayOffset = daysBetween(project.startDate, today());
-  const todayLeft = Math.max(0, Math.min((todayOffset / totalDays) * 100, 100));
+  const todayLeftPct = Math.max(0, Math.min((todayOffset / totalDays) * 100, 100));
   const todayVisible = todayOffset >= 0 && todayOffset <= totalDays;
 
-  // Build day labels for the header (show ~6 labels)
-  const labelCount = 6;
-  const dayLabels = Array.from({ length: labelCount + 1 }, (_, i) => {
-    const d = addDays(project.startDate, Math.round((i / labelCount) * totalDays));
-    return { label: formatDateShort(d), left: (i / labelCount) * 100 };
+  // Sort tasks by earliest due date (ascending) — earliest at top
+  const sortedTasks = [...tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+  // Partition milestones: linked to a task vs standalone
+  const linkedMilestoneMap = new Map<string, Milestone[]>();
+  const standaloneMilestones: Milestone[] = [];
+  milestones.forEach(m => {
+    if (m.taskId) {
+      const arr = linkedMilestoneMap.get(m.taskId) ?? [];
+      arr.push(m);
+      linkedMilestoneMap.set(m.taskId, arr);
+    } else {
+      standaloneMilestones.push(m);
+    }
   });
+
+  // Build day-label ticks for the header (~6 evenly spaced)
+  const TICK_COUNT = 5;
+  const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, i) => ({
+    label: formatDateShort(addDays(project.startDate, Math.round((i / TICK_COUNT) * totalDays))),
+    left: (i / TICK_COUNT) * 100,
+  }));
 
   const doneCount = tasks.filter(t => t.status === 'done').length;
   const progress = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
@@ -226,22 +451,22 @@ function ProjectCard({
 
   return (
     <div className="bg-white rounded-2xl border border-[var(--border)] overflow-hidden mb-4">
-      {/* Header */}
+      {/* ── Project header ── */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
           style={{ background: project.color + '22' }}
         >
           {project.emoji}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-[var(--foreground)] truncate">{project.title}</p>
             {project.status === 'completed' && (
               <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Done</span>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-0.5">
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <span className="text-xs text-[var(--muted-foreground)]">
               {formatDateShort(project.startDate)} – {formatDateShort(project.endDate)}
             </span>
@@ -279,112 +504,110 @@ function ProjectCard({
         </div>
       </div>
 
-      {/* Gantt area */}
-      <div className="px-4 pt-3 pb-4">
-        {/* Timeline header */}
-        <div className="relative h-5 mb-1 ml-32">
-          {dayLabels.map((l, i) => (
-            <span
-              key={i}
-              className="absolute text-[9px] text-[var(--muted-foreground)] -translate-x-1/2"
-              style={{ left: `${l.left}%` }}
-            >
-              {l.label}
-            </span>
-          ))}
-        </div>
-
-        {/* Task rows */}
-        {tasks.length === 0 && milestones.length === 0 ? (
-          <div className="text-center py-4 text-sm text-[var(--muted-foreground)]">
-            No tasks yet — add one below
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {tasks.map(task => (
-              <div key={task.id} className="flex items-start gap-2">
-                {/* Task label */}
-                <div className="w-32 shrink-0 text-xs text-[var(--foreground)] truncate pt-1 font-medium" title={task.title}>
-                  {task.title}
-                </div>
-                {/* Bar area */}
-                <div className="flex-1 relative" style={{ minHeight: 32 }}>
-                  {/* Today line */}
-                  {todayVisible && (
-                    <div
-                      className="absolute top-0 bottom-0 w-px bg-red-400 opacity-60 z-10"
-                      style={{ left: `${todayLeft}%` }}
-                    />
-                  )}
-                  <GanttBar
-                    task={task}
-                    projectStart={project.startDate}
-                    totalDays={totalDays}
-                    onEdit={onEditTask}
-                    onDelete={onDeleteTask}
-                    boardTaskTitle={boardTasks.find(bt => bt.id === task.boardTaskId)?.title}
-                  />
-                </div>
-              </div>
-            ))}
-
-            {/* Milestones row */}
-            {milestones.length > 0 && (
-              <div className="flex items-start gap-2 mt-2">
-                <div className="w-32 shrink-0 text-xs text-[var(--muted-foreground)] pt-1">Milestones</div>
-                <div className="flex-1 relative" style={{ height: 40 }}>
-                  {todayVisible && (
-                    <div
-                      className="absolute top-0 bottom-0 w-px bg-red-400 opacity-60 z-10"
-                      style={{ left: `${todayLeft}%` }}
-                    />
-                  )}
-                  {milestones.map(m => (
-                    <MilestoneMarker
-                      key={m.id}
-                      milestone={m}
-                      projectStart={project.startDate}
-                      totalDays={totalDays}
-                      onToggle={onToggleMilestone}
-                      onDelete={onDeleteMilestone}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Progress bar */}
-        {tasks.length > 0 && (
-          <div className="mt-3 ml-32">
-            <div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${progress}%`, background: project.color }}
-              />
+      {/* ── Gantt ── */}
+      {(sortedTasks.length > 0 || milestones.length > 0) ? (
+        <div className="overflow-x-auto">
+          {/* Timeline header */}
+          <div className="flex border-b border-[var(--border)] bg-[var(--muted)]/40 sticky top-0 z-10">
+            <div className="w-36 shrink-0 px-3 py-1.5 text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest">Task</div>
+            <div className="flex-1 relative h-7">
+              {ticks.map((tick, i) => (
+                <span
+                  key={i}
+                  className="absolute text-[9px] text-[var(--muted-foreground)] -translate-x-1/2 top-1.5"
+                  style={{ left: `${tick.left}%` }}
+                >
+                  {tick.label}
+                </span>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Add buttons */}
-        {project.status === 'active' && (
-          <div className="flex gap-2 mt-3 ml-32">
-            <button
-              onClick={() => onAddTask(project.id)}
-              className="text-xs text-[var(--sky)] font-medium hover:underline"
-            >
-              + Add task
-            </button>
-            <button
-              onClick={() => onAddMilestone(project.id)}
-              className="text-xs text-[var(--gold)] font-medium hover:underline"
-            >
-              ◆ Add milestone
-            </button>
+          {/* Rows + dependency SVG overlay */}
+          <div className="relative">
+            {/* Dependency arrows drawn over the entire row stack */}
+            {sortedTasks.length > 1 && (
+              <div
+                className="absolute inset-0 pointer-events-none z-20"
+                style={{ left: 144 /* w-36 = 144px */ }}
+              >
+                <DependencyArrows
+                  rows={sortedTasks}
+                  tasks={sortedTasks}
+                  projectStart={project.startDate}
+                  totalDays={totalDays}
+                  rowHeight={ROW_HEIGHT}
+                />
+              </div>
+            )}
+
+            {sortedTasks.map(task => (
+              <GanttRow
+                key={task.id}
+                task={task}
+                inlineMilestones={linkedMilestoneMap.get(task.id) ?? []}
+                projectStart={project.startDate}
+                totalDays={totalDays}
+                todayLeft={todayLeftPct}
+                todayVisible={todayVisible}
+                onEdit={onEditTask}
+                onDelete={onDeleteTask}
+                onToggleMilestone={onToggleMilestone}
+                onDeleteMilestone={onDeleteMilestone}
+                boardTaskTitle={boardTasks.find(bt => bt.id === task.boardTaskId)?.title}
+              />
+            ))}
+
+            {/* Standalone milestones row */}
+            <MilestonesRow
+              milestones={standaloneMilestones}
+              projectStart={project.startDate}
+              totalDays={totalDays}
+              todayLeft={todayLeftPct}
+              todayVisible={todayVisible}
+              onToggle={onToggleMilestone}
+              onDelete={onDeleteMilestone}
+            />
           </div>
-        )}
-      </div>
+
+          {/* Progress bar */}
+          {tasks.length > 0 && (
+            <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--muted)]/20">
+              <div className="flex items-center gap-2 ml-36">
+                <div className="flex-1 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${progress}%`, background: project.color }}
+                  />
+                </div>
+                <span className="text-[10px] text-[var(--muted-foreground)] font-medium shrink-0">{progress}%</span>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-6 text-sm text-[var(--muted-foreground)]">
+          No tasks yet — add one below
+        </div>
+      )}
+
+      {/* Add buttons */}
+      {project.status === 'active' && (
+        <div className="flex gap-4 px-4 py-3 border-t border-[var(--border)]">
+          <button
+            onClick={() => onAddTask(project.id)}
+            className="text-xs text-[var(--sky)] font-semibold hover:underline"
+          >
+            + Add task
+          </button>
+          <button
+            onClick={() => onAddMilestone(project.id)}
+            className="text-xs text-[var(--gold)] font-semibold hover:underline"
+          >
+            ◆ Add milestone
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -394,10 +617,8 @@ function ProjectCard({
 export default function Projects() {
   const { state, addTask: addBoardTask } = useApp();
 
-  // ── Single combined query (avoids hooks-in-loop) ──────────────────────────────────────────
   const listAllQuery = trpc.projects.listAll.useQuery(undefined, { refetchOnWindowFocus: false });
   const utils = trpc.useUtils();
-
   const invalidateAll = useCallback(() => utils.projects.listAll.invalidate(), [utils]);
 
   const upsertProject = trpc.projects.upsert.useMutation({
@@ -445,6 +666,7 @@ export default function Projects() {
     title: m.title,
     date: m.date,
     reached: m.reached,
+    taskId: (m as { taskId?: string | null }).taskId ?? null,
   }));
 
   function getTasksForProject(projectId: string): ProjectTask[] {
@@ -455,7 +677,6 @@ export default function Projects() {
     return allMilestones.filter(m => m.projectId === projectId);
   }
 
-  // ── Board tasks for linking ─────────────────────────────────────────────────
   const boardTasks = state.tasks.map(t => ({ id: t.id, title: t.title }));
 
   // ── Modal state ─────────────────────────────────────────────────────────────
@@ -522,6 +743,7 @@ export default function Projects() {
     status: 'todo' as ProjectTask['status'],
     color: '#2E86C1', boardTaskId: '', notes: '',
     createBoardTask: true,
+    dependsOn: [] as string[],
   });
 
   function openAddTask(projectId: string) {
@@ -530,7 +752,7 @@ export default function Projects() {
       title: '', startDate: proj?.startDate ?? today(),
       dueDate: addDays(proj?.startDate ?? today(), 7),
       status: 'todo', color: '#2E86C1', boardTaskId: '', notes: '',
-      createBoardTask: true,
+      createBoardTask: true, dependsOn: [],
     });
     setTaskModal({ open: true, projectId });
   }
@@ -541,6 +763,7 @@ export default function Projects() {
       status: t.status, color: t.color ?? '#2E86C1',
       boardTaskId: t.boardTaskId ?? '', notes: t.notes ?? '',
       createBoardTask: false,
+      dependsOn: t.dependsOn ?? [],
     });
     setTaskModal({ open: true, projectId: t.projectId, editing: t });
   }
@@ -552,7 +775,6 @@ export default function Projects() {
 
     let boardTaskId = tForm.boardTaskId || undefined;
 
-    // Auto-create board task if requested (new task only)
     if (!taskModal.editing && tForm.createBoardTask) {
       const newBoardTask = addBoardTask({
         title: tForm.title.trim(),
@@ -580,6 +802,7 @@ export default function Projects() {
       color: tForm.color,
       boardTaskId: boardTaskId ?? (tForm.boardTaskId || undefined),
       notes: tForm.notes || undefined,
+      dependsOn: tForm.dependsOn.length > 0 ? tForm.dependsOn : undefined,
     });
     setTaskModal({ open: false });
   }
@@ -589,10 +812,10 @@ export default function Projects() {
   }
 
   // ── Milestone form ──────────────────────────────────────────────────────────
-  const [mForm, setMForm] = useState({ title: '', date: today() });
+  const [mForm, setMForm] = useState({ title: '', date: today(), taskId: '' });
 
   function openAddMilestone(projectId: string) {
-    setMForm({ title: '', date: today() });
+    setMForm({ title: '', date: today(), taskId: '' });
     setMilestoneModal({ open: true, projectId });
   }
 
@@ -604,21 +827,34 @@ export default function Projects() {
       title: mForm.title.trim(),
       date: mForm.date,
       reached: false,
+      taskId: mForm.taskId || null,
     });
     setMilestoneModal({ open: false });
   }
 
   function handleToggleMilestone(m: Milestone) {
-    upsertMilestoneMut.mutate({ ...m, reached: !m.reached });
+    upsertMilestoneMut.mutate({ ...m, reached: !m.reached, taskId: m.taskId ?? null });
   }
 
   function handleDeleteMilestone(id: string) {
     deleteMilestoneMut.mutate({ id });
   }
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
-
   const canAddProject = activeProjects.length < 3;
+
+  // Tasks available for dependency linking (within the same project)
+  function getProjectTasksForModal(): ProjectTask[] {
+    if (!taskModal.projectId) return [];
+    return allTasks.filter(t => t.projectId === taskModal.projectId && t.id !== taskModal.editing?.id);
+  }
+
+  // Tasks available for milestone linking (within the same project)
+  function getProjectTasksForMilestone(): ProjectTask[] {
+    if (!milestoneModal.projectId) return [];
+    return allTasks.filter(t => t.projectId === milestoneModal.projectId);
+  }
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="pb-8">
@@ -673,6 +909,20 @@ export default function Projects() {
             <button onClick={openAddProject} className="btn-sky px-5 py-2.5 rounded-xl text-sm font-semibold text-white">
               + New Project
             </button>
+          </div>
+        )}
+
+        {/* Legend */}
+        {projects.length > 0 && (
+          <div className="flex items-center gap-4 text-[10px] text-[var(--muted-foreground)] mb-3">
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[var(--sky)]" />In progress</div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#4A7C59]" />Done</div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 rotate-45 rounded-sm bg-[var(--gold)]" />Milestone</div>
+            <div className="flex items-center gap-1"><div className="w-px h-3 bg-[var(--sky)]" />Today</div>
+            <div className="flex items-center gap-1">
+              <svg width="18" height="8" viewBox="0 0 18 8"><path d="M0 4 C5 4, 13 4, 16 4" fill="none" stroke="var(--muted-foreground)" strokeWidth="1" strokeDasharray="3 2" opacity="0.7"/><polygon points="16,4 13.5,3 13.5,5" fill="var(--muted-foreground)" opacity="0.7"/></svg>
+              Dependency
+            </div>
           </div>
         )}
 
@@ -732,15 +982,9 @@ export default function Projects() {
           <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <h2 className="font-bold text-lg">{projectModal.editing ? 'Edit Project' : 'New Project'}</h2>
 
-            {/* Emoji + Title */}
             <div className="flex gap-2">
-              <div className="relative">
-                <button
-                  className="w-11 h-11 rounded-xl border-2 border-[var(--border)] text-xl flex items-center justify-center"
-                  onClick={() => {/* cycle emoji */}}
-                >
-                  {pForm.emoji}
-                </button>
+              <div className="w-11 h-11 rounded-xl border-2 border-[var(--border)] text-xl flex items-center justify-center shrink-0">
+                {pForm.emoji}
               </div>
               <input
                 className="input-field flex-1"
@@ -751,7 +995,6 @@ export default function Projects() {
               />
             </div>
 
-            {/* Emoji picker */}
             <div className="flex flex-wrap gap-1.5">
               {EMOJI_OPTIONS.map(e => (
                 <button
@@ -764,7 +1007,6 @@ export default function Projects() {
               ))}
             </div>
 
-            {/* Color picker */}
             <div>
               <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Color</label>
               <div className="flex gap-2 mt-1.5">
@@ -779,7 +1021,6 @@ export default function Projects() {
               </div>
             </div>
 
-            {/* Dates */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Start date</label>
@@ -807,7 +1048,6 @@ export default function Projects() {
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Description (optional)</label>
               <textarea
@@ -819,9 +1059,7 @@ export default function Projects() {
             </div>
 
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setProjectModal({ open: false })} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">
-                Cancel
-              </button>
+              <button onClick={() => setProjectModal({ open: false })} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">Cancel</button>
               <button onClick={handleSaveProject} className="flex-1 py-3 rounded-xl btn-sky text-white text-sm font-semibold">
                 {projectModal.editing ? 'Save' : 'Create Project'}
               </button>
@@ -875,7 +1113,6 @@ export default function Projects() {
               </div>
             </div>
 
-            {/* Color */}
             <div>
               <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Bar color</label>
               <div className="flex gap-2 mt-1.5">
@@ -889,6 +1126,33 @@ export default function Projects() {
                 ))}
               </div>
             </div>
+
+            {/* Dependencies */}
+            {getProjectTasksForModal().length > 0 && (
+              <div>
+                <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Depends on (blocks this task)</label>
+                <div className="mt-1.5 space-y-1 max-h-32 overflow-y-auto">
+                  {getProjectTasksForModal().map(t => (
+                    <label key={t.id} className="flex items-center gap-2 cursor-pointer py-1">
+                      <input
+                        type="checkbox"
+                        checked={tForm.dependsOn.includes(t.id)}
+                        onChange={e => {
+                          setTForm(f => ({
+                            ...f,
+                            dependsOn: e.target.checked
+                              ? [...f.dependsOn, t.id]
+                              : f.dependsOn.filter(id => id !== t.id),
+                          }));
+                        }}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm text-[var(--foreground)] truncate">{t.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Board task link */}
             <div>
@@ -905,7 +1169,6 @@ export default function Projects() {
               </select>
             </div>
 
-            {/* Auto-create board task toggle (new tasks only) */}
             {!taskModal.editing && !tForm.boardTaskId && (
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -918,7 +1181,6 @@ export default function Projects() {
               </label>
             )}
 
-            {/* Notes */}
             <div>
               <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Notes</label>
               <textarea
@@ -930,9 +1192,7 @@ export default function Projects() {
             </div>
 
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setTaskModal({ open: false })} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">
-                Cancel
-              </button>
+              <button onClick={() => setTaskModal({ open: false })} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">Cancel</button>
               <button onClick={handleSaveTask} className="flex-1 py-3 rounded-xl btn-sky text-white text-sm font-semibold">
                 {taskModal.editing ? 'Save' : 'Add Task'}
               </button>
@@ -960,10 +1220,27 @@ export default function Projects() {
               <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Date</label>
               <input type="date" className="input-field mt-1" value={mForm.date} onChange={e => setMForm(f => ({ ...f, date: e.target.value }))} />
             </div>
+
+            {/* Link to task (optional) */}
+            {getProjectTasksForMilestone().length > 0 && (
+              <div>
+                <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Link to task row (optional)</label>
+                <select
+                  className="input-field mt-1"
+                  value={mForm.taskId}
+                  onChange={e => setMForm(f => ({ ...f, taskId: e.target.value }))}
+                >
+                  <option value="">— Standalone (Milestones row) —</option>
+                  {getProjectTasksForMilestone().map(t => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">Linked milestones appear inline on the task's row</p>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setMilestoneModal({ open: false })} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">
-                Cancel
-              </button>
+              <button onClick={() => setMilestoneModal({ open: false })} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">Cancel</button>
               <button onClick={handleSaveMilestone} className="flex-1 py-3 rounded-xl btn-sky text-white text-sm font-semibold">
                 Add Milestone
               </button>
@@ -983,12 +1260,8 @@ export default function Projects() {
                 : 'This removes the task from the Gantt. The linked board task (if any) is kept.'}
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">
-                Cancel
-              </button>
-              <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold">
-                Delete
-              </button>
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-semibold">Cancel</button>
+              <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold">Delete</button>
             </div>
           </div>
         </div>

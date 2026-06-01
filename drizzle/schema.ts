@@ -228,6 +228,8 @@ export const projectMilestones = mysqlTable("project_milestones", {
   title: varchar("title", { length: 255 }).notNull(),
   date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
   reached: boolean("reached").default(false).notNull(),
+  /** Optional: link this milestone to a specific project task row */
+  taskId: varchar("taskId", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

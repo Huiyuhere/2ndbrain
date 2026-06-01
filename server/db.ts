@@ -415,6 +415,7 @@ export async function upsertProjectMilestone(userId: number, milestone: typeof p
       title: milestone.title,
       date: milestone.date,
       reached: milestone.reached ?? false,
+      taskId: milestone.taskId ?? null,
     },
   });
 }
