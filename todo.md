@@ -95,3 +95,10 @@
 - [x] Navigation: add Projects inside /more on mobile
 - [x] App.tsx: /projects route registered
 - [x] TypeScript clean, 18/18 tests pass
+
+## Feedback Fixes (Jun 1)
+- [x] Remove "Back" buttons on web view (BackButton now has md:hidden — only shows on mobile)
+- [x] Add quarterly goal banner inside Projects page (compact GoalBanner below topbar)
+- [x] Use pencil/trash icons (same as Roadmap) for edit/delete in Projects
+- [x] Fix today's date to use SGT (UTC+8) — getTodayString, getWeekDates, getStreak, Projects today() all use UTC+8 offset
+- [x] TypeScript clean, 18/18 tests pass

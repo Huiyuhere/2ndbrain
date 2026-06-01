@@ -6,7 +6,7 @@ import { trpc } from '@/lib/trpc';
 import { useApp } from '@/contexts/AppContext';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
-import BackButton from '@/components/BackButton';
+import GoalBanner from '@/components/GoalBanner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,10 @@ function formatDateFull(dateStr: string): string {
 }
 
 function today(): string {
-  return new Date().toISOString().split('T')[0];
+  // Use SGT (UTC+8) so the date matches the user's timezone
+  const now = new Date();
+  const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  return sgt.toISOString().split('T')[0];
 }
 
 function maxEndDate(startDate: string): string {
@@ -263,16 +266,16 @@ function ProjectCard({
           )}
           <button
             onClick={() => onEditProject(project)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--sky)] hover:bg-[var(--sky-mist)] transition-all"
+            title="Edit project"
           >
-            ✏️
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <button
             onClick={() => onDeleteProject(project.id)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:bg-red-50 hover:text-red-500 transition-colors"
-          >
-            🗑️
-          </button>
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-50 transition-all text-base leading-none"
+            title="Delete project"
+          >×</button>
         </div>
       </div>
 
@@ -622,7 +625,6 @@ export default function Projects() {
       {/* Topbar */}
       <div className="topbar">
         <div className="flex items-center gap-3">
-          <BackButton />
           <div>
             <h1 className="topbar-title">🗂️ Projects</h1>
             <p className="text-xs text-[var(--muted-foreground)]">
@@ -643,6 +645,9 @@ export default function Projects() {
           + Project
         </button>
       </div>
+
+      {/* Quarterly focus banner */}
+      <GoalBanner compact />
 
       <div className="px-4 mt-4">
         {/* Capacity notice */}

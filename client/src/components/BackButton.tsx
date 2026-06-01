@@ -1,5 +1,5 @@
 // BackButton — shown at top of pages accessible from /more on mobile.
-// Uses wouter's useLocation to go back, with a fallback href.
+// Hidden on md+ screens since the sidebar handles navigation there.
 import { useLocation } from 'wouter';
 
 type Props = {
@@ -21,7 +21,7 @@ export default function BackButton({ fallback = '/more', label = 'Back' }: Props
   return (
     <button
       onClick={handleBack}
-      className="flex items-center gap-1.5 text-[var(--sky)] text-sm font-semibold py-1 pr-2 rounded-lg hover:bg-[var(--sky-mist)] transition-all active:scale-95"
+      className="md:hidden flex items-center gap-1.5 text-[var(--sky)] text-sm font-semibold py-1 pr-2 rounded-lg hover:bg-[var(--sky-mist)] transition-all active:scale-95"
       aria-label="Go back"
     >
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="shrink-0">

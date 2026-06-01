@@ -210,35 +210,45 @@ export function getCategoryById(state: AppState, id: string): Category | undefin
   return state.categories.find(c => c.id === id);
 }
 
-/** Returns local date string YYYY-MM-DD without UTC conversion (avoids timezone shift) */
+/**
+ * Convert a Date to YYYY-MM-DD using its UTC fields.
+ * When the Date has been pre-shifted to SGT (+8h), this gives the correct SGT date.
+ */
 export function toLocalDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+/** Returns today's date as YYYY-MM-DD in SGT (UTC+8). */
 export function getTodayString(): string {
-  return toLocalDateStr(new Date());
+  const now = new Date();
+  const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  return toLocalDateStr(sgt);
 }
 
 export function getWeekDates(): string[] {
-  const today = new Date();
+  // Use SGT (UTC+8) as the reference date
+  const now = new Date();
+  const today = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  monday.setUTCDate(today.getUTCDate() - ((today.getUTCDay() + 6) % 7));
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    d.setUTCDate(monday.getUTCDate() + i);
     return toLocalDateStr(d);
   });
 }
 
 export function getStreak(habits: Habit[]): number {
-  // Count consecutive days where at least one habit was completed
-  const today = new Date();
+  // Count consecutive days where at least one habit was completed (SGT)
+  const now = new Date();
+  const today = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   let streak = 0;
   for (let i = 0; i < 30; i++) {
     const d = new Date(today);
-    d.setDate(today.getDate() - i);
+    d.setUTCDate(today.getUTCDate() - i);
     const ds = toLocalDateStr(d);
     const anyDone = habits.some(h => h.completedDates.includes(ds));
     if (anyDone) streak++;
