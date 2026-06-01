@@ -114,3 +114,16 @@
 - [x] Progress bar below Gantt aligned with timeline column
 - [x] Completed projects collapsed under a <details> toggle
 - [x] TypeScript clean, 18/18 tests pass
+
+## Dynamic Dates + Profile Avatar Everywhere
+- [x] Fix Board.tsx hardcoded date subtitle → getTodayLabel() (SGT UTC+8)
+- [x] Fix Today.tsx hardcoded date subtitle → getTodayLabel() (SGT UTC+8)
+- [x] Fix Reflections.tsx hardcoded date subtitle → getTodayLabel() (SGT UTC+8)
+- [x] Fix Reflections.tsx TODAY constant → getTodayString() (SGT UTC+8)
+- [x] Fix Analytics.tsx hardcoded week subtitle → dynamic SGT week range from getWeekDates()
+- [x] Create shared UserAvatar component (shows avatar img if set, else initials from name)
+- [x] Wire UserAvatar to Board topbar (replaces hardcoded "TH" circle)
+- [x] Wire UserAvatar to Today topbar (replaces hardcoded "TH" circle)
+- [x] Wire UserAvatar to SideNav bottom user section + dynamic name
+- [x] Wire UserAvatar to Settings.tsx profile card + dynamic name
+- [x] TypeScript clean, 18/18 tests pass

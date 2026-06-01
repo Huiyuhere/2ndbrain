@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import UserAvatar from '@/components/UserAvatar';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import BackButton from '@/components/BackButton';
@@ -117,9 +118,9 @@ export default function Settings() {
         role="button"
         aria-label="Edit profile"
       >
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>TH</div>
+        <UserAvatar size={56} className="rounded-2xl" />
         <div>
-          <p className="font-semibold text-[var(--foreground)]">TH</p>
+          <p className="font-semibold text-[var(--foreground)]">{state.userProfile?.name || 'Me'}</p>
           <p className="text-sm text-[var(--muted-foreground)]">ENFJ · Empire Builder</p>
           <div className="flex items-center gap-2 mt-1">
             <span className="streak-badge text-xs">🔥 {state.streak} day streak</span>

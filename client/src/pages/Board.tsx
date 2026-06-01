@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { filterTasksByMode, Task, autoClassify } from '@/lib/store';
+import { filterTasksByMode, Task, autoClassify, getTodayLabel } from '@/lib/store';
+import UserAvatar from '@/components/UserAvatar';
 import BottomNav from '@/components/BottomNav';
 import GoalBanner from '@/components/GoalBanner';
 import MorningCheckin from '@/components/MorningCheckin';
@@ -82,11 +83,11 @@ export default function Board() {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div>
           <h1 className="font-[Playfair_Display] font-bold text-xl text-[var(--foreground)]">🌊 Board</h1>
-          <p className="text-xs text-[var(--muted-foreground)]">31 May 2026 · Sunday</p>
+          <p className="text-xs text-[var(--muted-foreground)]">{getTodayLabel()}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="streak-badge">🔥 {state.streak}</span>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--sky)] to-[var(--sky-mid)] flex items-center justify-center text-white text-sm font-bold shadow">TH</div>
+          <UserAvatar size={36} />
         </div>
       </div>
 

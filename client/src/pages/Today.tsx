@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getTodayString } from '@/lib/store';
+import { getTodayString, getTodayLabel } from '@/lib/store';
+import UserAvatar from '@/components/UserAvatar';
 import TaskCard from '@/components/TaskCard';
 import GoalBanner from '@/components/GoalBanner';
 import WeekStrip from '@/components/WeekStrip';
@@ -147,11 +148,11 @@ export default function Today() {
       <div className="topbar">
         <div>
           <div className="topbar-title">⚡ Today</div>
-          <div className="topbar-sub">Sunday, 31 May 2026</div>
+          <div className="topbar-sub">{getTodayLabel()}</div>
         </div>
         <div className="flex items-center gap-2">
           <span className="streak-badge">🔥 {state.streak}</span>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>TH</div>
+          <UserAvatar size={36} />
         </div>
       </div>
 

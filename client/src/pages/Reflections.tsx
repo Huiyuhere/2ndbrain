@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { getTodayString, getTodayLabel } from '@/lib/store';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '@/components/BackButton';
@@ -35,7 +36,7 @@ const PROMPTS_MAP = { weekly: WEEKLY_PROMPTS, monthly: MONTHLY_PROMPTS, quarterl
 
 const TAB_LABELS: Record<Tab, string> = { weekly: '📋 Weekly', monthly: '🌙 Monthly', quarterly: '👑 Quarterly' };
 
-const TODAY = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+const TODAY = getTodayString();
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -101,7 +102,7 @@ export default function Reflections() {
         <div>
           <BackButton />
           <div className="topbar-title mt-0.5">🌙 Reflections</div>
-          <div className="topbar-sub">31 May 2026</div>
+          <div className="topbar-sub">{getTodayLabel()}</div>
         </div>
       </div>
 

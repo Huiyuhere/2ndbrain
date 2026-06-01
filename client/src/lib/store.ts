@@ -257,6 +257,17 @@ export function getStreak(habits: Habit[]): number {
   return streak;
 }
 
+/** Returns today's date formatted as "1 Jun 2026 · Monday" in SGT. */
+export function getTodayLabel(): string {
+  const now = new Date();
+  const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  // Build a real Date using UTC fields so toLocaleDateString doesn't re-apply TZ
+  const d = new Date(Date.UTC(sgt.getUTCFullYear(), sgt.getUTCMonth(), sgt.getUTCDate()));
+  const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const dayStr = d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+  return `${dateStr} · ${dayStr}`;
+}
+
 export function autoClassify(title: string, categories: Category[]): string {
   const lower = title.toLowerCase();
   for (const cat of categories) {

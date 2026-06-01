@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { useApp } from '@/contexts/AppContext';
+import UserAvatar from '@/components/UserAvatar';
 
 const NAV_ITEMS = [
   { href: '/board',       emoji: '🌊', label: 'Board'       },
@@ -61,9 +62,9 @@ export default function SideNav() {
 
       {/* User footer */}
       <div className="px-4 py-4 border-t border-[var(--border)] flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow shrink-0" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>TH</div>
+        <UserAvatar size={36} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--foreground)] truncate">TH</p>
+          <p className="text-sm font-semibold text-[var(--foreground)] truncate">{state.userProfile?.name || 'Me'}</p>
           <p className="text-[11px] text-[var(--muted-foreground)]">🔥 {state.streak} day streak</p>
         </div>
       </div>

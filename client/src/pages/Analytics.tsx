@@ -1,6 +1,7 @@
 import { useApp } from '@/contexts/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import BackButton from '@/components/BackButton';
+import { getWeekDates } from '@/lib/store';
 
 const COLORS = ['#2E86C1', '#5DADE2', '#F0B429', '#4A7C59', '#C4A882', '#C0392B'];
 
@@ -73,7 +74,11 @@ export default function Analytics() {
         <div>
           <BackButton />
           <div className="topbar-title mt-0.5">📈 Analytics</div>
-          <div className="topbar-sub">Week of 25–31 May 2026</div>
+          <div className="topbar-sub">{(() => {
+            const dates = getWeekDates();
+            const fmt = (s: string) => { const [,m,d] = s.split('-'); const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${parseInt(d)} ${months[parseInt(m)-1]}`; };
+            return `Week of ${fmt(dates[0])} – ${fmt(dates[6])}`;
+          })()}</div>
         </div>
       </div>
 
