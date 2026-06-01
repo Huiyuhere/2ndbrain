@@ -321,3 +321,106 @@ export async function upsertReflection(userId: number, reflection: typeof reflec
     set: { answers: reflection.answers ?? null },
   });
 }
+
+// ─── Projects ─────────────────────────────────────────────────────────────────
+
+import {
+  projects,
+  projectTasks,
+  projectMilestones,
+  ProjectRow,
+  ProjectTaskRow,
+  ProjectMilestoneRow,
+} from "../drizzle/schema";
+
+export async function getProjects(userId: number): Promise<ProjectRow[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projects).where(eq(projects.userId, userId));
+}
+
+export async function upsertProject(userId: number, project: typeof projects.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(projects).values({ ...project, userId }).onDuplicateKeyUpdate({
+    set: {
+      title: project.title,
+      emoji: project.emoji ?? null,
+      color: project.color ?? null,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      status: project.status ?? "active",
+      description: project.description ?? null,
+    },
+  });
+}
+
+export async function deleteProject(userId: number, id: string) {
+  const db = await getDb();
+  if (!db) return;
+  // cascade delete tasks and milestones
+  await db.delete(projectMilestones).where(and(eq(projectMilestones.userId, userId), eq(projectMilestones.projectId, id)));
+  await db.delete(projectTasks).where(and(eq(projectTasks.userId, userId), eq(projectTasks.projectId, id)));
+  await db.delete(projects).where(and(eq(projects.userId, userId), eq(projects.id, id)));
+}
+
+// ─── Project Tasks ─────────────────────────────────────────────────────────────
+
+export async function getProjectTasks(userId: number, projectId: string): Promise<ProjectTaskRow[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projectTasks).where(
+    and(eq(projectTasks.userId, userId), eq(projectTasks.projectId, projectId))
+  );
+}
+
+export async function upsertProjectTask(userId: number, task: typeof projectTasks.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(projectTasks).values({ ...task, userId }).onDuplicateKeyUpdate({
+    set: {
+      title: task.title,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      status: task.status ?? "todo",
+      boardTaskId: task.boardTaskId ?? null,
+      dependsOn: task.dependsOn ?? null,
+      color: task.color ?? null,
+      notes: task.notes ?? null,
+    },
+  });
+}
+
+export async function deleteProjectTask(userId: number, id: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(projectTasks).where(and(eq(projectTasks.userId, userId), eq(projectTasks.id, id)));
+}
+
+// ─── Project Milestones ────────────────────────────────────────────────────────
+
+export async function getProjectMilestones(userId: number, projectId: string): Promise<ProjectMilestoneRow[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projectMilestones).where(
+    and(eq(projectMilestones.userId, userId), eq(projectMilestones.projectId, projectId))
+  );
+}
+
+export async function upsertProjectMilestone(userId: number, milestone: typeof projectMilestones.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(projectMilestones).values({ ...milestone, userId }).onDuplicateKeyUpdate({
+    set: {
+      title: milestone.title,
+      date: milestone.date,
+      reached: milestone.reached ?? false,
+    },
+  });
+}
+
+export async function deleteProjectMilestone(userId: number, id: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(projectMilestones).where(and(eq(projectMilestones.userId, userId), eq(projectMilestones.id, id)));
+}

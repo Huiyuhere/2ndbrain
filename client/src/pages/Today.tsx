@@ -50,6 +50,7 @@ export default function Today() {
   const [location, setLocation] = useState(existingEvening?.location || 'Singapore');
   const [dayTitle, setDayTitle] = useState(existingEvening?.title || '');
   const [rating, setRating] = useState(existingEvening?.rating || 0);
+  const [eveningMood, setEveningMood] = useState(existingEvening?.moodScore || 3);
   const [highlights, setHighlights] = useState<{ type: '+' | '-'; text: string }[]>(
     existingEvening?.highlights || [{ type: '+', text: '' }, { type: '+', text: '' }, { type: '-', text: '' }]
   );
@@ -87,6 +88,7 @@ export default function Today() {
     setLocation(ev?.location || 'Singapore');
     setDayTitle(ev?.title || '');
     setRating(ev?.rating || 0);
+    setEveningMood(ev?.moodScore || 3);
     setHighlights(
       ev?.highlights || [
         { type: '+', text: '' },
@@ -129,6 +131,7 @@ export default function Today() {
       location,
       title: dayTitle,
       rating,
+      moodScore: eveningMood,
       highlights: highlights.filter(h => h.text),
       freeWrite,
     });
@@ -280,7 +283,7 @@ export default function Today() {
               {eveningSaved ? (
                 <div className="bg-[var(--sky-mist)] rounded-2xl p-4 text-center">
                   <p className="text-2xl mb-1">🌙</p>
-                  <p className="text-sm font-semibold text-[var(--sky)]">Evening entry saved — {rating}/10</p>
+                  <p className="text-sm font-semibold text-[var(--sky)]">Evening entry saved — {['😔','😕','😐','😊','😄'][eveningMood-1]}</p>
                   {dayTitle && <p className="text-xs text-[var(--muted-foreground)] mt-1 italic">"{dayTitle}"</p>}
                   <button onClick={() => setEveningSaved(false)} className="text-xs text-[var(--sky)] mt-2 font-medium">Edit</button>
                 </div>
@@ -301,7 +304,28 @@ export default function Today() {
                   </div>
 
                   <div className="prompt-block">
-                    <div className="prompt-q">Day rating</div>
+                    <div className="prompt-q">Evening mood</div>
+                    <div className="flex gap-2 mt-1">
+                      {(['😔','😕','😐','😊','😄'] as const).map((emoji, idx) => {
+                        const val = idx + 1;
+                        return (
+                          <button
+                            key={val}
+                            onClick={() => setEveningMood(val)}
+                            className={`flex-1 h-11 rounded-xl text-xl border-2 transition-all ${
+                              eveningMood === val
+                                ? 'border-transparent btn-sky'
+                                : 'border-[var(--border)] bg-white'
+                            }`}
+                          >
+                            {emoji}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="prompt-block">
+                    <div className="prompt-q">Day rating (1–10)</div>
                     <div className="flex gap-1.5 flex-wrap">
                       {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                         <button

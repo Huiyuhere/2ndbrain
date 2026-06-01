@@ -29,6 +29,15 @@ import {
   upsertReflection,
   upsertRoadmapProject,
   upsertTask,
+  getProjects,
+  upsertProject,
+  deleteProject,
+  getProjectTasks,
+  upsertProjectTask,
+  deleteProjectTask,
+  getProjectMilestones,
+  upsertProjectMilestone,
+  deleteProjectMilestone,
 } from "./db";
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
@@ -110,6 +119,7 @@ const EveningEntrySchema = z.object({
   location: z.string().optional(),
   title: z.string().optional(),
   rating: z.number().optional(),
+  moodScore: z.number().min(1).max(5).optional(),
   highlights: z.array(HighlightSchema).optional(),
   freeWrite: z.string().optional(),
   photoUrl: z.string().optional(),
@@ -357,6 +367,7 @@ export const appRouter = router({
           location: input.location ?? null,
           title: input.title ?? null,
           rating: input.rating ?? 5,
+          moodScore: input.moodScore ?? 3,
           highlights: input.highlights ?? null,
           freeWrite: input.freeWrite ?? null,
           photoUrl: input.photoUrl ?? null,
@@ -506,6 +517,156 @@ export const appRouter = router({
       };
     }),
   }),
+
+  // ─── Projects ────────────────────────────────────────────────────────────────
+  projects: router({
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getProjects(ctx.workspaceOwnerId!);
+    }),
+
+    upsert: workspaceProcedure
+      .input(z.object({
+        id: z.string(),
+        title: z.string(),
+        emoji: z.string().optional(),
+        color: z.string().optional(),
+        startDate: z.string(),
+        endDate: z.string(),
+        status: z.enum(['active', 'completed', 'archived']).optional(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = ctx.workspaceOwnerId!;
+        // Enforce max 3 active projects
+        if (!input.status || input.status === 'active') {
+          const existing = await getProjects(userId);
+          const activeCount = existing.filter(p => p.status === 'active' && p.id !== input.id).length;
+          if (activeCount >= 3) {
+            throw new Error('MAX_PROJECTS: You can only have 3 active projects at a time. Complete one to add another.');
+          }
+        }
+        // Enforce 2-month max duration
+        const start = new Date(input.startDate);
+        const end = new Date(input.endDate);
+        const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000);
+        if (end < start) throw new Error('End date must be after start date.');
+        if (diffDays > 62) throw new Error('Projects cannot be longer than 2 months (62 days).');
+        await upsertProject(userId, {
+          id: input.id,
+          userId,
+          title: input.title,
+          emoji: input.emoji ?? '📁',
+          color: input.color ?? '#2E86C1',
+          startDate: input.startDate,
+          endDate: input.endDate,
+          status: input.status ?? 'active',
+          description: input.description ?? null,
+        });
+        return { success: true };
+      }),
+
+    delete: workspaceProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteProject(ctx.workspaceOwnerId!, input.id);
+        return { success: true };
+      }),
+
+    // ── Project Tasks ──────────────────────────────────────────────────────────
+    listTasks: workspaceProcedure
+      .input(z.object({ projectId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return getProjectTasks(ctx.workspaceOwnerId!, input.projectId);
+      }),
+
+    upsertTask: workspaceProcedure
+      .input(z.object({
+        id: z.string(),
+        projectId: z.string(),
+        title: z.string(),
+        startDate: z.string(),
+        dueDate: z.string(),
+        status: z.enum(['todo', 'in_progress', 'done']).optional(),
+        boardTaskId: z.string().optional(),
+        dependsOn: z.array(z.string()).optional(),
+        color: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = ctx.workspaceOwnerId!;
+        await upsertProjectTask(userId, {
+          id: input.id,
+          projectId: input.projectId,
+          userId,
+          title: input.title,
+          startDate: input.startDate,
+          dueDate: input.dueDate,
+          status: input.status ?? 'todo',
+          boardTaskId: input.boardTaskId ?? null,
+          dependsOn: input.dependsOn ?? null,
+          color: input.color ?? null,
+          notes: input.notes ?? null,
+        });
+        return { success: true };
+      }),
+
+    deleteTask: workspaceProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteProjectTask(ctx.workspaceOwnerId!, input.id);
+        return { success: true };
+      }),
+
+    // ── Project Milestones ─────────────────────────────────────────────────────
+    listMilestones: workspaceProcedure
+      .input(z.object({ projectId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return getProjectMilestones(ctx.workspaceOwnerId!, input.projectId);
+      }),
+
+    upsertMilestone: workspaceProcedure
+      .input(z.object({
+        id: z.string(),
+        projectId: z.string(),
+        title: z.string(),
+        date: z.string(),
+        reached: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await upsertProjectMilestone(ctx.workspaceOwnerId!, {
+          id: input.id,
+          projectId: input.projectId,
+          userId: ctx.workspaceOwnerId!,
+          title: input.title,
+          date: input.date,
+          reached: input.reached ?? false,
+        });
+        return { success: true };
+      }),
+
+    deleteMilestone: workspaceProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteProjectMilestone(ctx.workspaceOwnerId!, input.id);
+        return { success: true };
+      }),
+
+    // Single combined query — avoids hooks-in-loop on the client
+    listAll: workspaceProcedure.query(async ({ ctx }) => {
+      const userId = ctx.workspaceOwnerId!;
+      const projects = await getProjects(userId);
+      const [allTasks, allMilestones] = await Promise.all([
+        Promise.all(projects.map(p => getProjectTasks(userId, p.id))),
+        Promise.all(projects.map(p => getProjectMilestones(userId, p.id))),
+      ]);
+      return {
+        projects,
+        tasks: allTasks.flat(),
+        milestones: allMilestones.flat(),
+      };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
+

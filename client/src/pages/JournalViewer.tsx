@@ -135,6 +135,7 @@ export default function JournalViewer() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[var(--foreground)]">{formatDate(entry.date)}</p>
                     <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-xs text-[var(--muted-foreground)]">{['😔','😕','😐','😊','😄'][(entry.moodScore ?? 3) - 1]} Mood {entry.moodScore ?? 3}/5</span>
                       <span className="text-xs text-[var(--muted-foreground)]">⭐ {entry.rating}/10</span>
                       {entry.title && <span className="text-xs text-[var(--muted-foreground)] truncate">{entry.title}</span>}
                     </div>
@@ -252,6 +253,7 @@ function BackdateModal({
   const [location, setLocation] = useState(existingE?.location ?? 'Singapore');
   const [title, setTitle] = useState(existingE?.title ?? '');
   const [rating, setRating] = useState(existingE?.rating ?? 0);
+  const [eveningMood, setEveningMood] = useState(existingE?.moodScore ?? 3);
   const [highlights, setHighlights] = useState<{ type: '+' | '-'; text: string }[]>(
     existingE?.highlights ?? [{ type: '+', text: '' }, { type: '+', text: '' }, { type: '-', text: '' }]
   );
@@ -268,6 +270,7 @@ function BackdateModal({
     setLocation(existingE?.location ?? 'Singapore');
     setTitle(existingE?.title ?? '');
     setRating(existingE?.rating ?? 0);
+    setEveningMood(existingE?.moodScore ?? 3);
     setHighlights(
       existingE?.highlights ?? [
         { type: '+', text: '' },
@@ -287,6 +290,7 @@ function BackdateModal({
         location,
         title,
         rating,
+        moodScore: eveningMood,
         highlights: highlights.filter(h => h.text),
         freeWrite,
       });
@@ -421,7 +425,28 @@ function BackdateModal({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Day rating</label>
+                <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Evening mood</label>
+                <div className="flex gap-2 mt-1.5">
+                  {(['😔','😕','😐','😊','😄'] as const).map((emoji, idx) => {
+                    const val = idx + 1;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => setEveningMood(val)}
+                        className={`flex-1 h-11 rounded-xl text-xl border-2 transition-all ${
+                          eveningMood === val
+                            ? 'border-transparent btn-sky'
+                            : 'border-[var(--border)] bg-white'
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-widest">Day rating (1–10)</label>
                 <div className="flex gap-1.5 flex-wrap mt-1.5">
                   {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                     <button

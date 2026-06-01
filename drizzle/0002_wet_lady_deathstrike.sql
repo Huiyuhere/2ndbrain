@@ -1,0 +1,1 @@
+ALTER TABLE `evening_entries` ADD `moodScore` int DEFAULT 3;

@@ -165,6 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       location: e.location ?? '',
       title: e.title ?? '',
       rating: e.rating ?? 5,
+      moodScore: e.moodScore ?? 3,
       highlights: (e.highlights as EveningEntry['highlights']) ?? [],
       freeWrite: e.freeWrite ?? '',
       photoUrl: e.photoUrl ?? undefined,

@@ -68,3 +68,30 @@
 - [x] server/db.ts: deleteMoodEntry() helper added
 - [x] drizzle migration 0001: JSON column types already applied in DB; migration file + journal synced
 - [x] TypeScript clean, 18/18 tests pass
+
+## Evening Mood → Emoji Picker
+- [x] Replace star rating with 5-emoji mood picker in Today.tsx evening form
+- [x] Replace star rating with emoji picker in JournalViewer.tsx backdate modal
+- [x] Update evening entry card display to show mood emoji instead of stars
+- [x] Update Analytics.tsx to aggregate mood from both morning + evening entries per day
+- [x] Add moodScore column to drizzle schema + db:push
+- [x] TypeScript clean, 18/18 tests pass
+
+## Projects Feature (Gantt)
+- [x] Schema: projects table (id, title, color, startDate, endDate, status, userId)
+- [x] Schema: project_tasks table (id, projectId, title, startDate, dueDate, status, boardTaskId FK nullable, dependsOn JSON)
+- [x] Schema: project_milestones table (id, projectId, title, date, reached)
+- [x] Run db:push migration
+- [x] Server: projects.list, create (max 3 active check), update, complete, delete procedures
+- [x] Server: projectTasks.list, upsert, delete procedures
+- [x] Server: projectMilestones.list, upsert, delete procedures
+- [x] Projects page: Gantt chart with horizontal timeline, task bars, milestone diamonds
+- [x] Projects page: max 3 active projects — "Add project" disabled/locked when 3 active
+- [x] Projects page: 2-month max duration enforced on create/edit
+- [x] Projects page: "Complete project" action unlocks a slot
+- [x] Projects page: link project task to existing Board task via dropdown
+- [x] Projects page: auto-create board task (Week column) when adding new task
+- [x] Navigation: add Projects between Calendar and Habits in sidebar (web)
+- [x] Navigation: add Projects inside /more on mobile
+- [x] App.tsx: /projects route registered
+- [x] TypeScript clean, 18/18 tests pass

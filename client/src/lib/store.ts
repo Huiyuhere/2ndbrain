@@ -44,7 +44,8 @@ export type EveningEntry = {
   date: string;
   location: string;
   title: string;
-  rating: number; // 1-10
+  rating: number; // 1-10 day rating (kept for backward compat)
+  moodScore: number; // 1-5 emoji mood (same scale as morning)
   highlights: { type: '+' | '-'; text: string }[];
   freeWrite: string;
   photoUrl?: string;
@@ -160,7 +161,7 @@ const DEFAULT_MOOD: MoodEntry[] = [
 ];
 
 const DEFAULT_EVENING: EveningEntry[] = [
-  { date: '2026-05-28', location: 'Singapore', title: '有光的地方 ♥', rating: 8, highlights: [{ type: '+', text: 'Pleasant surprise with female sign ups' }, { type: '+', text: 'Walk in the park' }, { type: '+', text: '2x movies — Ratatouille <3' }, { type: '-', text: 'Procrastinated to wake up' }], freeWrite: '' },
+  { date: '2026-05-28', location: 'Singapore', title: '有光的地方 ♥', rating: 8, moodScore: 4, highlights: [{ type: '+', text: 'Pleasant surprise with female sign ups' }, { type: '+', text: 'Walk in the park' }, { type: '+', text: '2x movies — Ratatouille <3' }, { type: '-', text: 'Procrastinated to wake up' }], freeWrite: '' },
 ];
 
 const DEFAULT_ROADMAP_PROJECTS: RoadmapProject[] = [

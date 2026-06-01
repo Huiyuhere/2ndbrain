@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { useApp } from '@/contexts/AppContext';
 
 const MORE_ITEMS = [
+  { href: '/projects',    emoji: '🗂️', title: 'Projects',    desc: 'Gantt chart · max 3 active · 2-month cap' },
   { href: '/reflections', emoji: '🌙', title: 'Reflections', desc: 'Weekly, monthly & quarterly reviews' },
   { href: '/roadmap',     emoji: '🏔️', title: 'Roadmap',     desc: 'Gantt chart & milestone tracker' },
   { href: '/analytics',   emoji: '📈', title: 'Analytics',   desc: 'Mood, sleep, habits & time insights' },

@@ -14,11 +14,24 @@ const STAT_CARDS = [
 export default function Analytics() {
   const { state } = useApp();
 
-  const moodData = state.moodEntries.slice(-7).map(e => ({
-    day: e.date.slice(5),
-    mood: e.mood,
-    sleep: e.sleep,
-  }));
+  // Aggregate mood per day from both morning and evening entries
+  const moodData = (() => {
+    const last7Dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+    return last7Dates.map(date => {
+      const morning = state.moodEntries.find(e => e.date === date);
+      const evening = state.eveningEntries.find(e => e.date === date);
+      const moods = [morning?.mood, evening?.moodScore].filter((v): v is number => v !== undefined);
+      const avgMoodVal = moods.length ? moods.reduce((a, b) => a + b, 0) / moods.length : undefined;
+      return {
+        day: date.slice(5),
+        mood: avgMoodVal !== undefined ? parseFloat(avgMoodVal.toFixed(1)) : undefined,
+        sleep: morning?.sleep,
+      };
+    }).filter(d => d.mood !== undefined || d.sleep !== undefined);
+  })();
 
   const catCounts: Record<string, number> = {};
   state.tasks.forEach(t => {
@@ -44,7 +57,7 @@ export default function Analytics() {
     return total > 0 ? Math.round((done / total) * 100) : 0;
   })();
 
-  const avgMood = moodData.length ? (moodData.reduce((a, e) => a + e.mood, 0) / moodData.length).toFixed(1) : '—';
+  const avgMood = moodData.length ? (moodData.reduce((a, e) => a + (e.mood ?? 0), 0) / moodData.filter(e => e.mood !== undefined).length).toFixed(1) : '—';
   const weeklyScore = Math.round(completionRate * 0.25 + habitScore * 0.25 + (parseFloat(String(avgMood)) || 3) / 5 * 100 * 0.2 + state.quarterlyGoal.progress * 0.3);
 
   const statValues = [

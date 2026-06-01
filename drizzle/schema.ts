@@ -161,6 +161,7 @@ export const eveningEntries = mysqlTable("evening_entries", {
   location: varchar("location", { length: 255 }),
   title: varchar("title", { length: 255 }),
   rating: int("rating").default(5),
+  moodScore: int("moodScore").default(3), // 1-5 emoji mood scale
   highlights: json("highlights").$type<{ type: "+" | "-"; text: string }[]>(),
   freeWrite: text("freeWrite"),
   photoUrl: text("photoUrl"),
@@ -180,3 +181,54 @@ export const reflections = mysqlTable("reflections", {
 });
 
 export type ReflectionRow = typeof reflections.$inferSelect;
+
+// ─── Projects ─────────────────────────────────────────────────────────────────
+
+export const projects = mysqlTable("projects", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  emoji: varchar("emoji", { length: 8 }).default("📁"),
+  color: varchar("color", { length: 16 }).default("#2E86C1"),
+  startDate: varchar("startDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  endDate: varchar("endDate", { length: 10 }).notNull(),     // YYYY-MM-DD (max 2 months from start)
+  status: mysqlEnum("status", ["active", "completed", "archived"]).default("active").notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectRow = typeof projects.$inferSelect;
+
+// ─── Project Tasks ─────────────────────────────────────────────────────────────
+
+export const projectTasks = mysqlTable("project_tasks", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  projectId: varchar("projectId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  startDate: varchar("startDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  dueDate: varchar("dueDate", { length: 10 }).notNull(),     // YYYY-MM-DD
+  status: mysqlEnum("status", ["todo", "in_progress", "done"]).default("todo").notNull(),
+  boardTaskId: varchar("boardTaskId", { length: 64 }),       // FK to tasks.id (optional link)
+  dependsOn: json("dependsOn").$type<string[]>(),            // array of projectTask ids
+  color: varchar("color", { length: 16 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProjectTaskRow = typeof projectTasks.$inferSelect;
+
+// ─── Project Milestones ────────────────────────────────────────────────────────
+
+export const projectMilestones = mysqlTable("project_milestones", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  projectId: varchar("projectId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+  reached: boolean("reached").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProjectMilestoneRow = typeof projectMilestones.$inferSelect;

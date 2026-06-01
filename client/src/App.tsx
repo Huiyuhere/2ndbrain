@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import More from "./pages/More";
 import Profile from "./pages/Profile";
 import JournalViewer from "./pages/JournalViewer";
+import Projects from "./pages/Projects";
 import NotFound from "./pages/NotFound";
 
 function LoadingScreen() {
@@ -55,6 +56,7 @@ function AppLayout() {
           <Route path="/more"        component={More} />
           <Route path="/profile"      component={Profile} />
           <Route path="/journal"      component={JournalViewer} />
+          <Route path="/projects"     component={Projects} />
           <Route component={NotFound} />
         </Switch>
       </main>
