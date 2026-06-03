@@ -146,3 +146,11 @@
 - [x] Title double-tap stops propagation so card doesn't toggle expand
 - [x] Empty edit reverts to original; whitespace trimmed
 - [x] TypeScript clean, 18/18 tests pass
+## Board "Type" Filter
+- [x] Add 'type' to focusMode union type in store.ts
+- [x] Add 'type' to focusMode enum in drizzle schema + zod inputs (routers.ts); pushed migration
+- [x] Add 'type' branch to filterTasksByMode (Type = research/type ids); Work = work+planning; Personal = catch-all
+- [x] Add Type filter pill to Board filter bar (Life | Work | Type | Personal); Life shows all
+- [x] Update Profile.tsx focusMode label line to handle 'type'
+- [x] Add filterTasksByMode unit tests (vitest now includes client/src tests); 23/23 pass
+- [x] TypeScript clean, tests pass

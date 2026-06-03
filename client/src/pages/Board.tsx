@@ -96,14 +96,14 @@ export default function Board() {
 
       {/* FOCUS MODE SWITCHER */}
       <div className="px-4 mt-3 flex gap-2">
-        {(['life', 'work', 'personal'] as const).map(mode => (
+        {(['life', 'work', 'type', 'personal'] as const).map(mode => (
           <button
             key={mode}
             onClick={() => setFocusMode(mode)}
             className={`mode-pill ${state.focusMode === mode ? 'active-mode' : ''}`}
           >
-            {mode === 'life' ? '🌊' : mode === 'work' ? '💼' : '🌸'}
-            {mode === 'life' ? 'Life' : mode === 'work' ? 'Work' : 'Personal'}
+            {mode === 'life' ? '🌊' : mode === 'work' ? '💼' : mode === 'type' ? '🔍' : '🌸'}
+            {mode === 'life' ? 'Life' : mode === 'work' ? 'Work' : mode === 'type' ? 'Type' : 'Personal'}
           </button>
         ))}
       </div>

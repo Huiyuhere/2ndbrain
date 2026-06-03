@@ -90,7 +90,7 @@ export type RoadmapProject = {
 
 export type AppState = {
   userProfile: UserProfile;
-  focusMode: 'life' | 'work' | 'personal';
+  focusMode: 'life' | 'work' | 'type' | 'personal';
   categories: Category[];
   tasks: Task[];
   habits: Habit[];
@@ -276,10 +276,17 @@ export function autoClassify(title: string, categories: Category[]): string {
   return 'work';
 }
 
+// The "Type" category was renamed from the original "research" id, so match it by id here.
+const TYPE_CATEGORY_IDS = ['type', 'research'];
+const WORK_CATEGORY_IDS = ['work', 'planning'];
+
 export function filterTasksByMode(tasks: Task[], mode: AppState['focusMode']): Task[] {
   if (mode === 'life') return tasks;
-  if (mode === 'work') return tasks.filter(t => t.categoryId === 'work' || t.categoryId === 'planning' || t.categoryId === 'research');
-  if (mode === 'personal') return tasks.filter(t => t.categoryId === 'personal' || t.categoryId === 'ideas' || t.categoryId === 'exercise');
+  if (mode === 'type') return tasks.filter(t => TYPE_CATEGORY_IDS.includes(t.categoryId));
+  if (mode === 'work') return tasks.filter(t => WORK_CATEGORY_IDS.includes(t.categoryId));
+  // Personal is the catch-all: everything that isn't Work or Type.
+  if (mode === 'personal')
+    return tasks.filter(t => !WORK_CATEGORY_IDS.includes(t.categoryId) && !TYPE_CATEGORY_IDS.includes(t.categoryId));
   return tasks;
 }
 

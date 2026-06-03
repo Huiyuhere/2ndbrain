@@ -36,7 +36,7 @@ export const userProfiles = mysqlTable("user_profiles", {
   bio: text("bio"),
   avatarUrl: text("avatarUrl"),
   avatarKey: text("avatarKey"),
-  focusMode: mysqlEnum("focusMode", ["life", "work", "personal"]).default("life").notNull(),
+  focusMode: mysqlEnum("focusMode", ["life", "work", "type", "personal"]).default("life").notNull(),
   monthlyIntention: text("monthlyIntention"),
   quarterlyGoalText: text("quarterlyGoalText"),
   quarterlyGoalProgress: int("quarterlyGoalProgress").default(0),

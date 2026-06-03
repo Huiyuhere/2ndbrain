@@ -1,0 +1,1 @@
+ALTER TABLE `user_profiles` MODIFY COLUMN `focusMode` enum('life','work','type','personal') NOT NULL DEFAULT 'life';

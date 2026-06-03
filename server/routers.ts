@@ -157,7 +157,7 @@ export const appRouter = router({
         bio: z.string().optional(),
         avatarUrl: z.string().optional(),
         avatarKey: z.string().optional(),
-        focusMode: z.enum(["life", "work", "personal"]).optional(),
+        focusMode: z.enum(["life", "work", "type", "personal"]).optional(),
         monthlyIntention: z.string().optional(),
         quarterlyGoalText: z.string().optional(),
         quarterlyGoalProgress: z.number().optional(),
@@ -416,7 +416,7 @@ export const appRouter = router({
         profile: z.object({
           name: z.string().optional(),
           bio: z.string().optional(),
-          focusMode: z.enum(['life', 'work', 'personal']).optional(),
+          focusMode: z.enum(['life', 'work', 'type', 'personal']).optional(),
           monthlyIntention: z.string().optional(),
           quarterlyGoalText: z.string().optional(),
           quarterlyGoalProgress: z.number().optional(),

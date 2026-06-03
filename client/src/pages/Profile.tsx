@@ -222,7 +222,7 @@ export default function Profile() {
       <div className="mx-4 mt-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
         <p className="text-sm font-semibold text-[var(--foreground)] mb-1">🎛️ Current Focus Mode</p>
         <p className="text-xs text-[var(--muted-foreground)]">
-          {state.focusMode === 'life' ? '🌍 Life — seeing everything' : state.focusMode === 'work' ? '💼 Work — business & projects only' : '🌸 Personal — self & ideas only'}
+          {state.focusMode === 'life' ? '🌍 Life — seeing everything' : state.focusMode === 'work' ? '💼 Work — business & projects only' : state.focusMode === 'type' ? '🔍 Type — Type-related tasks only' : '🌸 Personal — self & ideas only'}
         </p>
         <p className="text-[10px] text-[var(--muted-foreground)] mt-1">Change in Settings → Focus Mode</p>
       </div>
