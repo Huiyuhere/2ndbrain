@@ -303,16 +303,28 @@
   flex-shrink: 0;
 }
 
-/* On desktop, kanban shows all columns in a grid */
+/* On desktop, kanban shows all columns centred */
 @media (min-width: 768px) {
   .kanban-scroll {
     overflow-x: auto;
     padding: 0 0 16px;
     scroll-snap-type: none;
+    justify-content: center;
+    flex-wrap: wrap;
   }
   .kanban-col {
     min-width: 220px;
     max-width: 220px;
+  }
+}
+@media (min-width: 1200px) {
+  .kanban-scroll {
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+  .kanban-col {
+    min-width: 200px;
+    max-width: 200px;
   }
 }
 
