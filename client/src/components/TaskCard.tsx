@@ -20,6 +20,11 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
   const [addingLink, setAddingLink] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
+  // Inline double-tap editing
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(task.title);
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [subDraft, setSubDraft] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
   const catPickerRef = useRef<HTMLDivElement>(null);
 
@@ -58,6 +63,25 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
 
   function removeSubtask(sid: string) {
     updateTask(task.id, { subtasks: subtasks.filter(s => s.id !== sid) });
+  }
+
+  function saveTitleInline() {
+    const t = titleDraft.trim();
+    if (t && t !== task.title) updateTask(task.id, { title: t });
+    else setTitleDraft(task.title);
+    setTitleEditing(false);
+  }
+
+  function startEditSub(sid: string, current: string) {
+    setEditingSubId(sid);
+    setSubDraft(current);
+  }
+
+  function saveSubInline(sid: string) {
+    const t = subDraft.trim();
+    if (t) updateTask(task.id, { subtasks: subtasks.map(s => s.id === sid ? { ...s, title: t } : s) });
+    setEditingSubId(null);
+    setSubDraft('');
   }
 
   function saveEdit() {
@@ -99,9 +123,28 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
         </button>
 
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium leading-snug ${isDone ? 'line-through text-[var(--muted-foreground)]' : 'text-[var(--foreground)]'}`}>
-            {task.title}
-          </p>
+          {titleEditing ? (
+            <input
+              autoFocus
+              className="w-full bg-[var(--muted)] border border-[var(--sky)] rounded-md px-2 py-1 text-sm font-medium leading-snug text-[var(--foreground)] focus:outline-none"
+              value={titleDraft}
+              onClick={e => e.stopPropagation()}
+              onChange={e => setTitleDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveTitleInline();
+                else if (e.key === 'Escape') { setTitleDraft(task.title); setTitleEditing(false); }
+              }}
+              onBlur={saveTitleInline}
+            />
+          ) : (
+            <p
+              className={`text-sm font-medium leading-snug select-none ${isDone ? 'line-through text-[var(--muted-foreground)]' : 'text-[var(--foreground)]'}`}
+              onDoubleClick={e => { e.stopPropagation(); setTitleDraft(task.title); setTitleEditing(true); }}
+              title="Double-tap to edit"
+            >
+              {task.title}
+            </p>
+          )}
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
             <div className="relative" ref={catPickerRef} onClick={e => e.stopPropagation()}>
               <button
@@ -191,9 +234,27 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           )}
                         </button>
-                        <span className={`text-sm flex-1 ${s.done ? 'line-through text-[var(--muted-foreground)]' : 'text-[var(--foreground)]'}`}>
-                          {s.title}
-                        </span>
+                        {editingSubId === s.id ? (
+                          <input
+                            autoFocus
+                            className="flex-1 bg-[var(--muted)] border border-[var(--sky)] rounded-md px-2 py-0.5 text-sm text-[var(--foreground)] focus:outline-none"
+                            value={subDraft}
+                            onChange={e => setSubDraft(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') saveSubInline(s.id);
+                              else if (e.key === 'Escape') { setEditingSubId(null); setSubDraft(''); }
+                            }}
+                            onBlur={() => saveSubInline(s.id)}
+                          />
+                        ) : (
+                          <span
+                            className={`text-sm flex-1 select-none ${s.done ? 'line-through text-[var(--muted-foreground)]' : 'text-[var(--foreground)]'}`}
+                            onDoubleClick={() => startEditSub(s.id, s.title)}
+                            title="Double-tap to edit"
+                          >
+                            {s.title}
+                          </span>
+                        )}
                         <button
                           onClick={() => removeSubtask(s.id)}
                           className="text-[var(--muted-foreground)] hover:text-red-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity px-1"

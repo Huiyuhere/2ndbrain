@@ -139,3 +139,10 @@
 - [x] Analytics: category pie chart now shows hours (not task count)
 - [x] Analytics: habit score uses SGT date (fixes hardcoded 2026-05-31)
 - [x] TypeScript clean, 18/18 tests pass
+
+## Double-tap inline edit (TaskCard)
+- [x] Double-tap task title → inline input (Enter saves, Esc cancels, blur saves)
+- [x] Double-tap subtask text → inline input (Enter saves, Esc cancels, blur saves)
+- [x] Title double-tap stops propagation so card doesn't toggle expand
+- [x] Empty edit reverts to original; whitespace trimmed
+- [x] TypeScript clean, 18/18 tests pass
