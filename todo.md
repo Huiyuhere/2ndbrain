@@ -127,3 +127,15 @@
 - [x] Wire UserAvatar to SideNav bottom user section + dynamic name
 - [x] Wire UserAvatar to Settings.tsx profile card + dynamic name
 - [x] TypeScript clean, 18/18 tests pass
+
+## Duration Tag Parsing ([Xh]/[Xm])
+- [x] Add parseDurationStr, parseTitleDuration, getTaskMinutes helpers to store.ts
+- [x] AppContext.addTask: auto-extract [Xh/m] from title and set task.duration
+- [x] AppContext.updateTask: re-parse duration when title is edited
+- [x] Calendar: block height proportional to getTaskMinutes (60px = 1h, min 30px)
+- [x] Calendar: show clean title (tag stripped) + duration badge on block
+- [x] Analytics: completion rate weighted by hours (planned vs completed hours)
+- [x] Analytics: "Hours completed / planned" full-width stat card
+- [x] Analytics: category pie chart now shows hours (not task count)
+- [x] Analytics: habit score uses SGT date (fixes hardcoded 2026-05-31)
+- [x] TypeScript clean, 18/18 tests pass

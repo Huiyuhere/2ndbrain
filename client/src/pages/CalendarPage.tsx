@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { Task } from '@/lib/store';
+import { Task, getTaskMinutes, parseTitleDuration } from '@/lib/store';
 import CategoryPill from '@/components/CategoryPill';
 import GoalBanner from '@/components/GoalBanner';
 import WeekStrip, { getWeekDays, toLocalDateStr } from '@/components/WeekStrip';
@@ -48,10 +48,17 @@ export default function CalendarPage() {
     toast.success(`Scheduled: ${durationModal.task.title}`);
   }
 
-  function getBlockHeight(duration?: string): number {
-    if (!duration) return 60;
-    const map: Record<string, number> = { '30m': 30, '1h': 60, '1.5h': 90, '2h': 120, '3h': 180 };
-    return map[duration] || 60;
+  function getBlockHeight(task: Task): number {
+    const mins = getTaskMinutes(task);
+    if (mins <= 0) return 60; // default 1h
+    // 60px = 1 hour; proportional scaling, min 30px
+    return Math.max(30, Math.round((mins / 60) * 60));
+  }
+
+  function getDurationLabel(task: Task): string {
+    if (task.duration) return task.duration;
+    const { durationStr } = parseTitleDuration(task.title);
+    return durationStr;
   }
 
   function getTaskAtHour(hour: number) {
@@ -123,12 +130,14 @@ export default function CalendarPage() {
                           className="absolute left-0 right-2 top-1 rounded-lg px-2 py-1 text-white text-xs font-semibold overflow-hidden"
                           style={{
                             background: 'linear-gradient(135deg, #2E86C1, #5DADE2)',
-                            height: `${getBlockHeight(task.duration) - 8}px`,
+                            height: `${getBlockHeight(task) - 8}px`,
                             zIndex: 2,
                           }}
                         >
-                          <p className="truncate">{task.title}</p>
-                          {task.duration && <p className="text-white/70 text-[10px]">{task.duration}</p>}
+                          <p className="truncate">{parseTitleDuration(task.title).cleanTitle || task.title}</p>
+                          {getDurationLabel(task) && (
+                            <p className="text-white/70 text-[10px]">{getDurationLabel(task)}</p>
+                          )}
                         </div>
                       )}
                     </div>

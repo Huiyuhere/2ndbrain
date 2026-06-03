@@ -3,7 +3,7 @@ import { trpc } from '@/lib/trpc';
 import {
   AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection,
   Category, RoadmapProject, UserProfile,
-  getTodayString, autoClassify, getStreak,
+  getTodayString, autoClassify, getStreak, parseTitleDuration,
 } from '@/lib/store';
 import { nanoid } from 'nanoid';
 
@@ -221,11 +221,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTask = useCallback((task: Omit<Task, 'id' | 'createdAt'>): Task => {
+    // Auto-extract [Xh/m] duration tag from title if no explicit duration supplied
+    const { durationStr, minutes } = parseTitleDuration(task.title);
+    const autoDuration = !task.duration && minutes > 0 ? durationStr : task.duration;
     const newTask: Task = {
       ...task,
       id: nanoid(),
       createdAt: getTodayString(),
       categoryId: task.categoryId || autoClassify(task.title, state.categories),
+      duration: autoDuration,
     };
     setState(s => ({ ...s, tasks: [...s.tasks, newTask] }));
     upsertTask.mutate(newTask);
@@ -233,8 +237,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.categories]);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
+    // If title is being updated, re-parse duration from the new title
+    let resolvedUpdates = { ...updates };
+    if (updates.title !== undefined && updates.duration === undefined) {
+      const { durationStr, minutes } = parseTitleDuration(updates.title);
+      if (minutes > 0) resolvedUpdates.duration = durationStr;
+    }
     setState(s => {
-      const updated = s.tasks.map(t => t.id === id ? { ...t, ...updates } : t);
+      const updated = s.tasks.map(t => t.id === id ? { ...t, ...resolvedUpdates } : t);
       const task = updated.find(t => t.id === id);
       if (task) upsertTask.mutate(task);
       return { ...s, tasks: updated };

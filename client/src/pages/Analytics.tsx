@@ -1,7 +1,7 @@
 import { useApp } from '@/contexts/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import BackButton from '@/components/BackButton';
-import { getWeekDates } from '@/lib/store';
+import { getWeekDates, getTaskMinutes, getTodayString } from '@/lib/store';
 
 const COLORS = ['#2E86C1', '#5DADE2', '#F0B429', '#4A7C59', '#C4A882', '#C0392B'];
 
@@ -34,24 +34,35 @@ export default function Analytics() {
     }).filter(d => d.mood !== undefined || d.sleep !== undefined);
   })();
 
-  const catCounts: Record<string, number> = {};
+  // ── Hour-weighted task metrics ────────────────────────────────────────────
+  // Sum hours per category (falls back to 1h per task if no duration tag)
+  const catHours: Record<string, number> = {};
+  let totalPlannedHours = 0;
+  let completedHours = 0;
   state.tasks.forEach(t => {
-    catCounts[t.categoryId] = (catCounts[t.categoryId] || 0) + 1;
+    const mins = getTaskMinutes(t);
+    const hrs = mins > 0 ? mins / 60 : 1; // default 1h if untagged
+    catHours[t.categoryId] = (catHours[t.categoryId] || 0) + hrs;
+    totalPlannedHours += hrs;
+    if (t.column === 'done') completedHours += hrs;
   });
-  const pieData = Object.entries(catCounts).map(([id, count]) => {
+  const pieData = Object.entries(catHours).map(([id, hrs]) => {
     const cat = state.categories.find(c => c.id === id);
-    return { name: cat?.name || id, value: count };
+    return { name: cat?.name || id, value: parseFloat(hrs.toFixed(1)) };
   });
 
-  const completedThisWeek = state.tasks.filter(t => t.column === 'done').length;
-  const totalTasks = state.tasks.length;
-  const completionRate = totalTasks > 0 ? Math.round((completedThisWeek / totalTasks) * 100) : 0;
+  // Completion rate weighted by hours
+  const completionRate = totalPlannedHours > 0 ? Math.round((completedHours / totalPlannedHours) * 100) : 0;
+  const hoursLogged = parseFloat(completedHours.toFixed(1));
 
   const habitScore = (() => {
-    const today = new Date(2026, 4, 31);
+    const todayStr = getTodayString();
+    const now = new Date();
+    const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
     const last7 = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today); d.setDate(today.getDate() - i);
-      return d.toISOString().split('T')[0];
+      const d = new Date(sgt); d.setUTCDate(sgt.getUTCDate() - i);
+      const y = d.getUTCFullYear(), m = String(d.getUTCMonth()+1).padStart(2,'0'), day = String(d.getUTCDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
     });
     const total = state.habits.length * 7;
     const done = state.habits.reduce((a, h) => a + last7.filter(d => h.completedDates.includes(d)).length, 0);
@@ -102,6 +113,17 @@ export default function Analytics() {
             <p className="text-xs text-[var(--muted-foreground)] mt-0.5 font-medium">{s.label}</p>
           </div>
         ))}
+        {/* Hours logged — spans full width */}
+        <div className="col-span-2 p-4 rounded-2xl border bg-[#FEF0E8] border-[#F2C4A0] flex items-center justify-between">
+          <div>
+            <p className="font-bold text-2xl font-['Playfair_Display'] text-[#C4704A]">{hoursLogged}h</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5 font-medium">Hours completed</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold text-[#C4704A]">{parseFloat(totalPlannedHours.toFixed(1))}h planned</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{completionRate}% by hours</p>
+          </div>
+        </div>
       </div>
 
       {/* MOOD + SLEEP CHART — fixed width, scrollable */}
@@ -128,7 +150,7 @@ export default function Analytics() {
 
       {/* TIME BY CATEGORY */}
       <div className="mx-4 mt-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
-        <p className="text-sm font-semibold text-[var(--foreground)] mb-3">🗂️ Tasks by Category</p>
+        <p className="text-sm font-semibold text-[var(--foreground)] mb-3">🗂️ Hours by Category</p>
         <div className="flex gap-4 items-center">
           <div style={{ width: 120, height: 120, flexShrink: 0 }}>
             <ResponsiveContainer width={120} height={120}>
@@ -144,7 +166,7 @@ export default function Analytics() {
               <div key={i} className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
                 <span className="text-xs text-[var(--foreground)] flex-1 truncate">{d.name}</span>
-                <span className="text-xs font-bold text-[var(--muted-foreground)]">{d.value}</span>
+                <span className="text-xs font-bold text-[var(--muted-foreground)]">{d.value}h</span>
               </div>
             ))}
           </div>

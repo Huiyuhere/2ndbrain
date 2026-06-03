@@ -282,3 +282,42 @@ export function filterTasksByMode(tasks: Task[], mode: AppState['focusMode']): T
   if (mode === 'personal') return tasks.filter(t => t.categoryId === 'personal' || t.categoryId === 'ideas' || t.categoryId === 'exercise');
   return tasks;
 }
+
+/**
+ * Parse a duration string like "1h", "30m", "1.5h", "90m" into minutes.
+ * Returns 0 if the string is empty or unrecognised.
+ */
+export function parseDurationStr(duration: string): number {
+  if (!duration) return 0;
+  const hMatch = duration.match(/^(\d+(?:\.\d+)?)h$/);
+  if (hMatch) return Math.round(parseFloat(hMatch[1]) * 60);
+  const mMatch = duration.match(/^(\d+)m$/);
+  if (mMatch) return parseInt(mMatch[1], 10);
+  return 0;
+}
+
+/**
+ * Extract a duration tag like [3h], [30m], [1.5h] from a task title.
+ * Returns { durationStr, cleanTitle } where cleanTitle has the tag stripped.
+ * If no tag is found, durationStr is '' and cleanTitle equals the original title.
+ */
+export function parseTitleDuration(title: string): { durationStr: string; cleanTitle: string; minutes: number } {
+  const match = title.match(/^\[(\d+(?:\.\d+)?[hm])\]\s*/);
+  if (!match) return { durationStr: '', cleanTitle: title, minutes: 0 };
+  const durationStr = match[1];
+  const cleanTitle = title.slice(match[0].length);
+  const minutes = parseDurationStr(durationStr);
+  return { durationStr, cleanTitle, minutes };
+}
+
+/**
+ * Given a task title, return the effective duration in minutes.
+ * Priority: explicit task.duration field > [Xh/m] tag in title.
+ */
+export function getTaskMinutes(task: Task): number {
+  if (task.duration) {
+    const m = parseDurationStr(task.duration);
+    if (m > 0) return m;
+  }
+  return parseTitleDuration(task.title).minutes;
+}
