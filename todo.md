@@ -154,3 +154,18 @@
 - [x] Update Profile.tsx focusMode label line to handle 'type'
 - [x] Add filterTasksByMode unit tests (vitest now includes client/src tests); 23/23 pass
 - [x] TypeScript clean, tests pass
+
+## Estimation Tracker + Task-Type Tags
+- [x] Schema: add actualMinutes (int, nullable) to tasks table + push
+- [x] Schema: add taskType (varchar, nullable) to tasks table + push
+- [x] store.ts: add TASK_TYPES list (build, plan, design, create, communication, marketing, social, exercise) + emoji/color map
+- [x] store.ts: add autoClassifyTaskType(title) keyword helper
+- [x] store.ts: add actualMinutes + taskType to Task type; parseDurationInput, formatMinutes, getEstimationStats, getSleepHabitInsight helpers
+- [x] routers.ts + db.ts: persist actualMinutes + taskType on task upsert/update
+- [x] AppContext: auto-assign taskType on addTask; updateTask supports actualMinutes/taskType
+- [x] Completion pop-up: ActualTimeModal asks "How long did it take?" when a task newly enters Done (checkbox + drag-to-Done both trigger it); Save logs actualMinutes, Skip dismisses; live over/under preview
+- [x] TaskCard: task-type tag chip + editable picker popover (build/plan/design/etc.), '+ type' when unset, Clear option; also shows logged actual time
+- [x] Analytics: Estimation Accuracy section — horizontal bar chart of % over/under per task type + per-type breakdown rows; insight card names most over/under-estimated type
+- [x] Analytics + Habits: replaced hardcoded "40% more after 7h sleep" with real getSleepHabitInsight (hides/falls back when insufficient data)
+- [x] Tests for parseDurationInput, formatMinutes, autoClassifyTaskType, getEstimationStats, getSleepHabitInsight (estimation.test.ts)
+- [x] TypeScript clean, 38/38 tests pass

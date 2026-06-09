@@ -124,6 +124,8 @@ export async function upsertTask(userId: number, task: typeof tasks.$inferInsert
       subtasks: task.subtasks ?? null,
       links: task.links ?? null,
       notes: task.notes ?? null,
+      taskType: task.taskType ?? null,
+      actualMinutes: task.actualMinutes ?? null,
       completedAt: task.completedAt ?? null,
     },
   });

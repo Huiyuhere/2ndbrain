@@ -1,7 +1,7 @@
 import { useApp } from '@/contexts/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import BackButton from '@/components/BackButton';
-import { getWeekDates, getTaskMinutes, getTodayString } from '@/lib/store';
+import { getWeekDates, getTaskMinutes, getTodayString, getEstimationStats, getSleepHabitInsight, formatMinutes } from '@/lib/store';
 
 const COLORS = ['#2E86C1', '#5DADE2', '#F0B429', '#4A7C59', '#C4A882', '#C0392B'];
 
@@ -78,6 +78,22 @@ export default function Analytics() {
     `${avgMood}/5`,
     `${state.quarterlyGoal.progress}%`,
   ];
+
+  // ── Estimation accuracy by task type ───────────────────────────────────────
+  const estStats = getEstimationStats(state.tasks);
+  const estChartData = estStats.map(s => ({
+    name: `${s.emoji} ${s.label}`,
+    diff: s.diffPct,
+    fill: s.diffPct > 0 ? '#C0392B' : s.diffPct < 0 ? '#2E8B57' : '#ABA59D',
+    count: s.count,
+    est: s.estMinutes,
+    act: s.actualMinutes,
+  }));
+  const mostUnder = estStats.find(s => s.diffPct > 0);
+  const mostOver = [...estStats].reverse().find(s => s.diffPct < 0);
+
+  // ── Real sleep insight (replaces hardcoded copy) ────────────────────────────
+  const sleepInsight = getSleepHabitInsight(state.moodEntries, state.habits);
 
   return (
     <div className="pb-4">
@@ -192,12 +208,73 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* INSIGHT CARD */}
-      <div className="mx-4 mt-4 p-4 rounded-2xl bg-[var(--gold-glow)] border border-[var(--gold)]/20">
-        <p className="text-sm font-semibold text-[var(--gold)] mb-1">💡 This week's insight</p>
-        <p className="text-sm text-[var(--foreground)] leading-relaxed">
-          You complete <strong>40% more tasks</strong> on days after 7+ hours of sleep. Your best productivity window is <strong>9am–12pm</strong>.
+      {/* ESTIMATION ACCURACY */}
+      <div className="mx-4 mt-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
+        <p className="text-sm font-semibold text-[var(--foreground)] mb-1">⏱ Estimation Accuracy</p>
+        <p className="text-[11px] text-[var(--muted-foreground)] mb-3">
+          How your estimate compares to actual time, by task type. <span className="text-[#C0392B] font-semibold">Red = underestimated</span> (took longer), <span className="text-[#2E8B57] font-semibold">green = overestimated</span> (faster).
         </p>
+        {estChartData.length === 0 ? (
+          <div className="py-6 text-center">
+            <p className="text-sm text-[var(--muted-foreground)]">No data yet.</p>
+            <p className="text-[11px] text-[var(--muted-foreground)] mt-1">Add a duration estimate (e.g. <strong>[1h]</strong> in the title) and log actual time when you complete tasks.</p>
+          </div>
+        ) : (
+          <>
+            <div className="chart-container">
+              <div className="chart-inner" style={{ height: Math.max(120, estChartData.length * 38) }}>
+                <ResponsiveContainer width="100%" height={Math.max(120, estChartData.length * 38)}>
+                  <BarChart data={estChartData} layout="vertical" margin={{ top: 4, right: 36, left: 8, bottom: 0 }}>
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${v > 0 ? '+' : ''}${v}%`} domain={['dataMin', 'dataMax']} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={92} />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      formatter={(val: number, _n, p: { payload?: { count?: number; est?: number; act?: number } }) => {
+                        const d = p.payload ?? {};
+                        const label = val > 0 ? `${val}% over (underestimated)` : val < 0 ? `${Math.abs(val)}% under (overestimated)` : 'on target';
+                        return [`${label} · ${d.count ?? 0} task${(d.count ?? 0) === 1 ? '' : 's'}`, 'Diff'];
+                      }}
+                    />
+                    <Bar dataKey="diff" radius={[0, 4, 4, 0]}>
+                      {estChartData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {estStats.map(s => (
+                <div key={s.typeId} className="flex items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-white" style={{ background: s.color }}>{s.emoji} {s.label}</span>
+                  <span className="text-[var(--muted-foreground)]">{formatMinutes(s.estMinutes)} est → {formatMinutes(s.actualMinutes)} actual</span>
+                  <span className={`ml-auto font-bold ${s.diffPct > 0 ? 'text-[#C0392B]' : s.diffPct < 0 ? 'text-[#2E8B57]' : 'text-[var(--muted-foreground)]'}`}>
+                    {s.diffPct > 0 ? '+' : ''}{s.diffPct}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* INSIGHT CARD */}
+      <div className="mx-4 mt-4 mb-2 p-4 rounded-2xl bg-[var(--gold-glow)] border border-[var(--gold)]/20">
+        <p className="text-sm font-semibold text-[var(--gold)] mb-1">💡 This week's insight</p>
+        {(mostUnder || mostOver) ? (
+          <p className="text-sm text-[var(--foreground)] leading-relaxed">
+            {mostUnder && <>You most <strong>underestimate</strong> {mostUnder.emoji} <strong>{mostUnder.label}</strong> tasks (by ~{mostUnder.diffPct}%). </>}
+            {mostOver && <>You tend to <strong>overestimate</strong> {mostOver.emoji} <strong>{mostOver.label}</strong> tasks (~{Math.abs(mostOver.diffPct)}% faster). </>}
+          </p>
+        ) : (
+          <p className="text-sm text-[var(--foreground)] leading-relaxed">
+            Log actual time on a few estimated tasks to see which task types you over- or under-estimate.
+          </p>
+        )}
+        {sleepInsight && sleepInsight.pctMore !== 0 && (
+          <p className="text-sm text-[var(--foreground)] leading-relaxed mt-2">
+            😴 You complete <strong>{Math.abs(sleepInsight.pctMore)}% {sleepInsight.pctMore > 0 ? 'more' : 'fewer'}</strong> habits on days after 7+ hours of sleep <span className="text-[var(--muted-foreground)]">(based on {sleepInsight.goodDays + sleepInsight.lowDays} days logged)</span>.
+          </p>
+        )}
       </div>
     </div>
   );

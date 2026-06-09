@@ -74,6 +74,8 @@ export const tasks = mysqlTable("tasks", {
   subtasks: json("subtasks").$type<{ id: string; title: string; done: boolean }[]>(),
   links: json("links").$type<{ label: string; url: string }[]>(),
   notes: text("notes"),
+  taskType: varchar("taskType", { length: 32 }),
+  actualMinutes: int("actualMinutes"),
   createdAt: varchar("createdAt", { length: 10 }).notNull(),
   completedAt: varchar("completedAt", { length: 10 }),
 });

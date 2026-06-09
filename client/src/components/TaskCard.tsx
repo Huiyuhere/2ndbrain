@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Task } from '@/lib/store';
+import { Task, TASK_TYPES, getTaskType, formatMinutes } from '@/lib/store';
 import { useApp } from '@/contexts/AppContext';
 import CategoryPill from './CategoryPill';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,6 +22,8 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [showCatPicker, setShowCatPicker] = useState(false);
   const catPickerRef = useRef<HTMLDivElement>(null);
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const typePickerRef = useRef<HTMLDivElement>(null);
 
   // Close category picker when clicking outside
   useEffect(() => {
@@ -34,6 +36,20 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showCatPicker]);
+
+  // Close type picker when clicking outside
+  useEffect(() => {
+    if (!showTypePicker) return;
+    function handleClick(e: MouseEvent) {
+      if (typePickerRef.current && !typePickerRef.current.contains(e.target as Node)) {
+        setShowTypePicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showTypePicker]);
+
+  const taskType = getTaskType(task.taskType);
 
   const subtasks = task.subtasks ?? [];
   const doneCount = subtasks.filter(s => s.done).length;
@@ -167,7 +183,63 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
                 </div>
               )}
             </div>
+            {/* Task-type tag chip + picker */}
+            <div className="relative" ref={typePickerRef} onClick={e => e.stopPropagation()}>
+              <button
+                onClick={e => { e.stopPropagation(); setShowTypePicker(v => !v); }}
+                className="flex items-center"
+                title="Change task type"
+              >
+                {taskType ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full text-[10px] px-2 py-0.5 font-semibold text-white"
+                    style={{ background: taskType.color }}
+                  >
+                    {taskType.emoji} {taskType.label}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 rounded-full text-[10px] px-2 py-0.5 font-semibold border border-dashed border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--sky)] hover:text-[var(--sky)] transition-colors">
+                    + type
+                  </span>
+                )}
+              </button>
+              {showTypePicker && (
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg border border-[var(--border)] p-2 min-w-[170px]">
+                  <p className="text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-2 pb-1.5">Task type</p>
+                  {TASK_TYPES.map(tt => (
+                    <button
+                      key={tt.id}
+                      onClick={() => { updateTask(task.id, { taskType: tt.id }); setShowTypePicker(false); }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[var(--muted)] ${
+                        tt.id === task.taskType ? 'bg-[var(--muted)]' : ''
+                      }`}
+                    >
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full text-[10px] px-2 py-0.5 font-semibold text-white"
+                        style={{ background: tt.color }}
+                      >
+                        {tt.emoji} {tt.label}
+                      </span>
+                      {tt.id === task.taskType && (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-[var(--sky)]"><polyline points="20 6 9 17 4 12"/></svg>
+                      )}
+                    </button>
+                  ))}
+                  {task.taskType && (
+                    <button
+                      onClick={() => { updateTask(task.id, { taskType: undefined }); setShowTypePicker(false); }}
+                      className="w-full text-left px-2 py-1.5 mt-1 rounded-lg text-[11px] text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors"
+                    >
+                      Clear type
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             {task.duration && <span className="text-[10px] text-[var(--muted-foreground)] font-medium">{task.duration}</span>}
+            {task.actualMinutes != null && task.actualMinutes > 0 && (
+              <span className="text-[10px] font-semibold text-[var(--sky)]" title="Actual time taken">⏱ {formatMinutes(task.actualMinutes)}</span>
+            )}
             {task.scheduledTime && <span className="text-[10px] bg-[var(--sky-mist)] text-[var(--sky)] font-semibold px-1.5 py-0.5 rounded-full">{task.scheduledTime}</span>}
             {task.notes === 'Overdue' && <span className="text-[10px] text-red-500 font-semibold">Overdue</span>}
             {subtasks.length > 0 && (

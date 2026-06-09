@@ -3,9 +3,10 @@ import { trpc } from '@/lib/trpc';
 import {
   AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection,
   Category, RoadmapProject, UserProfile,
-  getTodayString, autoClassify, getStreak, parseTitleDuration,
+  getTodayString, autoClassify, getStreak, parseTitleDuration, autoClassifyTaskType,
 } from '@/lib/store';
 import { nanoid } from 'nanoid';
+import ActualTimeModal from '@/components/ActualTimeModal';
 
 // ─── Default data (used when user has no DB data yet) ─────────────────────────
 
@@ -64,6 +65,9 @@ type AppContextType = {
   deleteProject: (id: string) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   updateMonthlyIntention: (text: string) => void;
+  logActualTime: (id: string, minutes: number) => void;
+  pendingCompletion: Task | null;
+  setPendingCompletion: (task: Task | null) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -73,6 +77,7 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(buildDefaultState);
   const [dbLoading, setDbLoading] = useState(true);
+  const [pendingCompletion, setPendingCompletion] = useState<Task | null>(null);
   const seededRef = useRef(false);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -124,6 +129,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       subtasks: (t.subtasks as Task['subtasks']) ?? [],
       links: (t.links as Task['links']) ?? [],
       notes: t.notes ?? undefined,
+      taskType: t.taskType ?? undefined,
+      actualMinutes: t.actualMinutes ?? undefined,
       createdAt: t.createdAt,
       completedAt: t.completedAt ?? undefined,
     }));
@@ -230,6 +237,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: getTodayString(),
       categoryId: task.categoryId || autoClassify(task.title, state.categories),
       duration: autoDuration,
+      taskType: task.taskType ?? autoClassifyTaskType(task.title),
     };
     setState(s => ({ ...s, tasks: [...s.tasks, newTask] }));
     upsertTask.mutate(newTask);
@@ -237,13 +245,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.categories]);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
-    // If title is being updated, re-parse duration from the new title
-    let resolvedUpdates = { ...updates };
-    if (updates.title !== undefined && updates.duration === undefined) {
-      const { durationStr, minutes } = parseTitleDuration(updates.title);
-      if (minutes > 0) resolvedUpdates.duration = durationStr;
-    }
     setState(s => {
+      // If title is being updated, re-parse duration from the new title
+      const resolvedUpdates: Partial<Task> = { ...updates };
+      if (updates.title !== undefined && updates.duration === undefined) {
+        const { durationStr, minutes } = parseTitleDuration(updates.title);
+        if (minutes > 0) resolvedUpdates.duration = durationStr;
+      }
+      // Auto-assign a task type from the new title if the task has none yet
+      if (updates.title !== undefined && updates.taskType === undefined) {
+        const existing = s.tasks.find(t => t.id === id);
+        if (existing && !existing.taskType) {
+          const guessed = autoClassifyTaskType(updates.title!);
+          if (guessed) resolvedUpdates.taskType = guessed;
+        }
+      }
       const updated = s.tasks.map(t => t.id === id ? { ...t, ...resolvedUpdates } : t);
       const task = updated.find(t => t.id === id);
       if (task) upsertTask.mutate(task);
@@ -258,9 +274,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const moveTask = useCallback((id: string, column: Task['column']) => {
     setState(s => {
+      const wasDone = s.tasks.find(t => t.id === id)?.column === 'done';
       const updated = s.tasks.map(t => t.id === id
         ? { ...t, column, completedAt: column === 'done' ? getTodayString() : t.completedAt }
         : t);
+      const task = updated.find(t => t.id === id);
+      if (task) upsertTask.mutate(task);
+      // When a task newly enters Done and hasn't logged actual time yet, prompt for it
+      if (task && column === 'done' && !wasDone && task.actualMinutes == null) {
+        setPendingCompletion(task);
+      }
+      return { ...s, tasks: updated };
+    });
+  }, []);
+
+  const logActualTime = useCallback((id: string, minutes: number) => {
+    setState(s => {
+      const updated = s.tasks.map(t => t.id === id ? { ...t, actualMinutes: minutes } : t);
       const task = updated.find(t => t.id === id);
       if (task) upsertTask.mutate(task);
       return { ...s, tasks: updated };
@@ -404,8 +434,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateCategories, updateQuarterlyGoal,
       addHabit, deleteHabit, addGoal, deleteGoal, addProject, updateProject, deleteProject,
       updateProfile, updateMonthlyIntention,
+      logActualTime, pendingCompletion, setPendingCompletion,
     }}>
       {children}
+      <ActualTimeModal />
     </AppContext.Provider>
   );
 }

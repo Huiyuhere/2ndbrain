@@ -58,6 +58,8 @@ const TaskSchema = z.object({
   subtasks: z.array(SubtaskSchema).optional(),
   links: z.array(LinkSchema).optional(),
   notes: z.string().optional(),
+  taskType: z.string().optional(),
+  actualMinutes: z.number().optional(),
   createdAt: z.string(),
   completedAt: z.string().optional(),
 });
@@ -226,6 +228,8 @@ export const appRouter = router({
           subtasks: input.subtasks ?? null,
           links: input.links ?? null,
           notes: input.notes ?? null,
+          taskType: input.taskType ?? null,
+          actualMinutes: input.actualMinutes ?? null,
           createdAt: input.createdAt,
           completedAt: input.completedAt ?? null,
         });
@@ -438,7 +442,8 @@ export const appRouter = router({
             column: t.column, duration: t.duration ?? null,
             scheduledTime: t.scheduledTime ?? null, scheduledDate: t.scheduledDate ?? null,
             subtasks: t.subtasks ?? null, links: t.links ?? null,
-            notes: t.notes ?? null, createdAt: t.createdAt,
+            notes: t.notes ?? null, taskType: t.taskType ?? null,
+            actualMinutes: t.actualMinutes ?? null, createdAt: t.createdAt,
             completedAt: t.completedAt ?? null,
           });
         }

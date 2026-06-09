@@ -21,6 +21,8 @@ export type Task = {
   subtasks?: { id: string; title: string; done: boolean }[];
   links?: { label: string; url: string }[];
   notes?: string;
+  taskType?: string; // estimation tag: build/plan/design/etc.
+  actualMinutes?: number; // actual time taken, logged on completion
   createdAt: string;
   completedAt?: string;
 };
@@ -327,4 +329,158 @@ export function getTaskMinutes(task: Task): number {
     if (m > 0) return m;
   }
   return parseTitleDuration(task.title).minutes;
+}
+
+// ─── Task Types (estimation tags) ──────────────────────────────────────────
+// These are independent of categories. Used to track which kinds of work
+// you over- or under-estimate.
+
+export type TaskType = {
+  id: string;
+  label: string;
+  emoji: string;
+  color: string;
+  keywords: string[];
+};
+
+export const TASK_TYPES: TaskType[] = [
+  { id: 'build',         label: 'Build',         emoji: '🔨', color: '#2471A3', keywords: ['build', 'code', 'develop', 'implement', 'integrate', 'bot', 'backend', 'frontend', 'api', 'deploy', 'fix', 'debug'] },
+  { id: 'plan',          label: 'Plan',          emoji: '🗂️', color: '#C4704A', keywords: ['plan', 'strategy', 'roadmap', 'schedule', 'organise', 'organize', 'prepare', 'outline'] },
+  { id: 'design',        label: 'Design',        emoji: '🎨', color: '#8E44AD', keywords: ['design', 'figma', 'mockup', 'ui', 'ux', 'wireframe', 'prototype', 'layout', 'logo', 'brand'] },
+  { id: 'create',        label: 'Create',        emoji: '✍️', color: '#C9952A', keywords: ['create', 'write', 'draft', 'edit', 'film', 'shoot', 'record', 'reel', 'video', 'content', 'deck'] },
+  { id: 'communication', label: 'Communication', emoji: '💬', color: '#16A085', keywords: ['email', 'call', 'meet', 'meeting', 'message', 'reply', 'reach out', 'follow up', 'discuss', 'coordinate', 'contact'] },
+  { id: 'marketing',     label: 'Marketing',     emoji: '📣', color: '#E67E22', keywords: ['marketing', 'campaign', 'promo', 'ad', 'ads', 'launch', 'growth', 'seo', 'newsletter', 'audience'] },
+  { id: 'social',        label: 'Social',        emoji: '🌐', color: '#5DADE2', keywords: ['social', 'tiktok', 'instagram', 'post', 'tweet', 'community', 'dm', 'engage', 'collab'] },
+  { id: 'exercise',      label: 'Exercise',      emoji: '🏃', color: '#C0392B', keywords: ['gym', 'run', 'workout', 'walk', 'exercise', 'sport', 'yoga', 'stretch', 'training'] },
+];
+
+export function getTaskType(id?: string): TaskType | undefined {
+  if (!id) return undefined;
+  return TASK_TYPES.find(t => t.id === id);
+}
+
+/**
+ * Guess a task type id from the task title using keyword matching.
+ * Returns undefined if nothing matches (so the user can assign manually).
+ */
+export function autoClassifyTaskType(title: string): string | undefined {
+  const lower = title.toLowerCase();
+  for (const t of TASK_TYPES) {
+    if (t.keywords.some(k => lower.includes(k))) return t.id;
+  }
+  return undefined;
+}
+
+/**
+ * Parse a free-form duration input like "3h", "1.5h", "45m", "90", "2h30m"
+ * into minutes. A bare number is treated as minutes. Returns 0 if unrecognised.
+ */
+export function parseDurationInput(input: string): number {
+  const s = input.trim().toLowerCase().replace(/\s+/g, '');
+  if (!s) return 0;
+  // combined like 2h30m
+  const combo = s.match(/^(\d+(?:\.\d+)?)h(\d+)m$/);
+  if (combo) return Math.round(parseFloat(combo[1]) * 60) + parseInt(combo[2], 10);
+  const hMatch = s.match(/^(\d+(?:\.\d+)?)h$/);
+  if (hMatch) return Math.round(parseFloat(hMatch[1]) * 60);
+  const mMatch = s.match(/^(\d+)m$/);
+  if (mMatch) return parseInt(mMatch[1], 10);
+  const bare = s.match(/^(\d+(?:\.\d+)?)$/); // bare number = minutes
+  if (bare) return Math.round(parseFloat(bare[1]));
+  return 0;
+}
+
+/** Format a minutes value back into a friendly string like "1h 30m" or "45m". */
+export function formatMinutes(min: number): string {
+  if (!min || min <= 0) return '—';
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
+export type EstimationStat = {
+  typeId: string;
+  label: string;
+  emoji: string;
+  color: string;
+  count: number;          // number of completed tasks with both estimate + actual
+  estMinutes: number;     // total estimated minutes
+  actualMinutes: number;  // total actual minutes
+  diffPct: number;        // (actual - est) / est * 100  (positive = underestimated)
+};
+
+/**
+ * Aggregate estimation accuracy per task type from tasks that are done,
+ * have an estimate (>0) and a logged actualMinutes (>0).
+ * diffPct > 0  → took longer than planned (underestimated)
+ * diffPct < 0  → took less than planned (overestimated)
+ */
+export function getEstimationStats(tasks: Task[]): EstimationStat[] {
+  const byType = new Map<string, { est: number; act: number; count: number }>();
+  for (const t of tasks) {
+    const est = getTaskMinutes(t);
+    const act = t.actualMinutes ?? 0;
+    if (est <= 0 || act <= 0) continue;
+    const typeId = t.taskType || 'other';
+    const cur = byType.get(typeId) ?? { est: 0, act: 0, count: 0 };
+    cur.est += est;
+    cur.act += act;
+    cur.count += 1;
+    byType.set(typeId, cur);
+  }
+  const stats: EstimationStat[] = [];
+  for (const [typeId, v] of Array.from(byType.entries())) {
+    const tt = getTaskType(typeId);
+    stats.push({
+      typeId,
+      label: tt?.label ?? 'Other',
+      emoji: tt?.emoji ?? '🏷️',
+      color: tt?.color ?? '#ABA59D',
+      count: v.count,
+      estMinutes: v.est,
+      actualMinutes: v.act,
+      diffPct: v.est > 0 ? Math.round(((v.act - v.est) / v.est) * 100) : 0,
+    });
+  }
+  // sort by most underestimated first (largest positive diff)
+  return stats.sort((a, b) => b.diffPct - a.diffPct);
+}
+
+/**
+ * Compute a real "sleep vs habit completion" insight from mood + habit data.
+ * Compares habit-completion rate on days following 7h+ sleep vs under 7h.
+ * Returns null if there isn't enough data to make a claim.
+ */
+export function getSleepHabitInsight(
+  moodEntries: MoodEntry[],
+  habits: Habit[],
+): { pctMore: number; goodDays: number; lowDays: number } | null {
+  if (habits.length === 0) return null;
+  const goodSleepDates: string[] = [];
+  const lowSleepDates: string[] = [];
+  for (const m of moodEntries) {
+    if (m.sleep >= 7) goodSleepDates.push(m.date);
+    else if (m.sleep > 0) lowSleepDates.push(m.date);
+  }
+  if (goodSleepDates.length < 2 || lowSleepDates.length < 2) return null;
+
+  const rateFor = (dates: string[]) => {
+    let done = 0;
+    let total = 0;
+    for (const d of dates) {
+      for (const h of habits) {
+        total += 1;
+        if (h.completedDates.includes(d)) done += 1;
+      }
+    }
+    return total > 0 ? done / total : 0;
+  };
+
+  const goodRate = rateFor(goodSleepDates);
+  const lowRate = rateFor(lowSleepDates);
+  if (lowRate <= 0) return null;
+  const pctMore = Math.round(((goodRate - lowRate) / lowRate) * 100);
+  return { pctMore, goodDays: goodSleepDates.length, lowDays: lowSleepDates.length };
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getTodayString, toLocalDateStr } from '@/lib/store';
+import { getTodayString, toLocalDateStr, getSleepHabitInsight } from '@/lib/store';
 import GoalBanner from '@/components/GoalBanner';
 import { toast } from 'sonner';
 
@@ -72,6 +72,7 @@ export default function Habits() {
   const avgSleep = state.moodEntries.length
     ? (state.moodEntries.reduce((a, e) => a + e.sleep, 0) / state.moodEntries.length).toFixed(1)
     : '—';
+  const sleepInsight = getSleepHabitInsight(state.moodEntries, state.habits);
 
   return (
     <div className="pb-4">
@@ -224,9 +225,15 @@ export default function Habits() {
             );
           })}
         </div>
-        <p className="text-xs text-[var(--muted-foreground)] mt-2">
-          💡 You complete <strong>40% more habits</strong> after 7+ hours of sleep.
-        </p>
+        {sleepInsight && sleepInsight.pctMore !== 0 ? (
+          <p className="text-xs text-[var(--muted-foreground)] mt-2">
+            💡 You complete <strong>{Math.abs(sleepInsight.pctMore)}% {sleepInsight.pctMore > 0 ? 'more' : 'fewer'}</strong> habits after 7+ hours of sleep.
+          </p>
+        ) : (
+          <p className="text-xs text-[var(--muted-foreground)] mt-2">
+            💡 Log a few more days of sleep to unlock your sleep-vs-habits insight.
+          </p>
+        )}
       </div>
 
       {/* ADD HABIT MODAL — centered */}
