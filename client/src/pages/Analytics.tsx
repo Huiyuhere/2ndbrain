@@ -1,7 +1,8 @@
 import { useApp } from '@/contexts/AppContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import BackButton from '@/components/BackButton';
-import { getWeekDates, getTaskMinutes, getTodayString, getEstimationStats, getSleepHabitInsight, formatMinutes } from '@/lib/store';
+import { getWeekDates, getTaskMinutes, getTodayString, getEstimationStats, getSleepHabitInsight, formatMinutes, getHoursByType, getHoursByCategory } from '@/lib/store';
+import type { HourBreakdown } from '@/lib/store';
 
 const COLORS = ['#2E86C1', '#5DADE2', '#F0B429', '#4A7C59', '#C4A882', '#C0392B'];
 
@@ -50,6 +51,15 @@ export default function Analytics() {
     const cat = state.categories.find(c => c.id === id);
     return { name: cat?.name || id, value: parseFloat(hrs.toFixed(1)) };
   });
+
+  // ── Side-by-side: hours by type vs hours by category ──────────────────────
+  const hoursByType = getHoursByType(state.tasks);
+  const hoursByCategory = getHoursByCategory(state.tasks, state.categories);
+  const maxPanelHours = Math.max(
+    1,
+    ...hoursByType.map(r => r.hours),
+    ...hoursByCategory.map(r => r.hours),
+  );
 
   // Completion rate weighted by hours
   const completionRate = totalPlannedHours > 0 ? Math.round((completedHours / totalPlannedHours) * 100) : 0;
@@ -164,29 +174,10 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* TIME BY CATEGORY */}
-      <div className="mx-4 mt-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
-        <p className="text-sm font-semibold text-[var(--foreground)] mb-3">🗂️ Hours by Category</p>
-        <div className="flex gap-4 items-center">
-          <div style={{ width: 120, height: 120, flexShrink: 0 }}>
-            <ResponsiveContainer width={120} height={120}>
-              <PieChart>
-                <Pie data={pieData} cx={55} cy={55} innerRadius={30} outerRadius={55} dataKey="value" paddingAngle={2}>
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex-1 space-y-1.5">
-            {pieData.map((d, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                <span className="text-xs text-[var(--foreground)] flex-1 truncate">{d.name}</span>
-                <span className="text-xs font-bold text-[var(--muted-foreground)]">{d.value}h</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* HOURS BY TYPE vs CATEGORY — side by side */}
+      <div className="mx-4 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+        <HoursPanel title="🏷️ Hours by Type" rows={hoursByType} maxHours={maxPanelHours} />
+        <HoursPanel title="🗂️ Hours by Category" rows={hoursByCategory} maxHours={maxPanelHours} />
       </div>
 
       {/* GOAL ALIGNMENT */}
@@ -276,6 +267,43 @@ export default function Analytics() {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Equal-size panel: a titled card with horizontal hour bars per row. */
+function HoursPanel({ title, rows, maxHours }: { title: string; rows: HourBreakdown[]; maxHours: number }) {
+  const total = rows.reduce((a, r) => a + r.hours, 0);
+  return (
+    <div className="p-4 rounded-2xl border border-[var(--border)] bg-white flex flex-col">
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="text-sm font-semibold text-[var(--foreground)]">{title}</p>
+        <span className="text-[11px] text-[var(--muted-foreground)]">{Math.round(total * 10) / 10}h total</span>
+      </div>
+      {rows.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center py-6">
+          <p className="text-sm text-[var(--muted-foreground)]">No tasks yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {rows.map(r => (
+            <div key={r.id}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-[var(--foreground)] truncate flex items-center gap-1.5">
+                  <span>{r.emoji}</span>{r.label}
+                </span>
+                <span className="text-xs font-bold text-[var(--muted-foreground)] shrink-0 ml-2">{r.hours}h</span>
+              </div>
+              <div className="h-2 rounded-full bg-[var(--muted)] overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-[width] duration-500"
+                  style={{ width: `${maxHours > 0 ? (r.hours / maxHours) * 100 : 0}%`, background: r.color, '--ease-out': 'cubic-bezier(0.23, 1, 0.32, 1)' } as React.CSSProperties}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

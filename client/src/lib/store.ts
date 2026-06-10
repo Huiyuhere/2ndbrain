@@ -352,6 +352,7 @@ export const TASK_TYPES: TaskType[] = [
   { id: 'marketing',     label: 'Marketing',     emoji: '📣', color: '#E67E22', keywords: ['marketing', 'campaign', 'promo', 'ad', 'ads', 'launch', 'growth', 'seo', 'newsletter', 'audience'] },
   { id: 'social',        label: 'Social',        emoji: '🌐', color: '#5DADE2', keywords: ['social', 'tiktok', 'instagram', 'post', 'tweet', 'community', 'dm', 'engage', 'collab'] },
   { id: 'exercise',      label: 'Exercise',      emoji: '🏃', color: '#C0392B', keywords: ['gym', 'run', 'workout', 'walk', 'exercise', 'sport', 'yoga', 'stretch', 'training'] },
+  { id: 'admin',         label: 'Admin',         emoji: '🗃️', color: '#7F8C8D', keywords: ['admin', 'invoice', 'expense', 'tax', 'finance', 'budget', 'paperwork', 'sort', 'booking', 'receipt', 'report', 'submit', 'form'] },
 ];
 
 export function getTaskType(id?: string): TaskType | undefined {
@@ -483,4 +484,66 @@ export function getSleepHabitInsight(
   if (lowRate <= 0) return null;
   const pctMore = Math.round(((goodRate - lowRate) / lowRate) * 100);
   return { pctMore, goodDays: goodSleepDates.length, lowDays: lowSleepDates.length };
+}
+
+// ─── Hours by Type / Category (for side-by-side comparison) ─────────────────
+
+export type HourBreakdown = {
+  id: string;
+  label: string;
+  emoji: string;
+  color: string;
+  hours: number; // total hours (actual time if logged, else estimate, else 1h fallback)
+};
+
+/**
+ * Effective hours for a task: prefer logged actual time, fall back to the
+ * estimate (duration tag/field), and finally default to 1h for untagged tasks
+ * so every task contributes consistently to the comparison.
+ */
+function taskHours(t: Task): number {
+  if (t.actualMinutes && t.actualMinutes > 0) return t.actualMinutes / 60;
+  const est = getTaskMinutes(t);
+  return est > 0 ? est / 60 : 1;
+}
+
+/** Aggregate total hours grouped by task type. Untyped tasks fold into "Other". */
+export function getHoursByType(tasks: Task[]): HourBreakdown[] {
+  const map = new Map<string, number>();
+  for (const t of tasks) {
+    const id = t.taskType || 'other';
+    map.set(id, (map.get(id) ?? 0) + taskHours(t));
+  }
+  const rows: HourBreakdown[] = [];
+  for (const [id, hrs] of Array.from(map.entries())) {
+    const tt = getTaskType(id);
+    rows.push({
+      id,
+      label: tt?.label ?? 'Other',
+      emoji: tt?.emoji ?? '🏷️',
+      color: tt?.color ?? '#ABA59D',
+      hours: Math.round(hrs * 10) / 10,
+    });
+  }
+  return rows.sort((a, b) => b.hours - a.hours);
+}
+
+/** Aggregate total hours grouped by category. */
+export function getHoursByCategory(tasks: Task[], categories: Category[]): HourBreakdown[] {
+  const map = new Map<string, number>();
+  for (const t of tasks) {
+    map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + taskHours(t));
+  }
+  const rows: HourBreakdown[] = [];
+  for (const [id, hrs] of Array.from(map.entries())) {
+    const cat = categories.find(c => c.id === id);
+    rows.push({
+      id,
+      label: cat?.name ?? id,
+      emoji: cat?.emoji ?? '🏷️',
+      color: cat?.textColor ?? '#ABA59D',
+      hours: Math.round(hrs * 10) / 10,
+    });
+  }
+  return rows.sort((a, b) => b.hours - a.hours);
 }

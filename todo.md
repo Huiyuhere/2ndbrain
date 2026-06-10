@@ -169,3 +169,11 @@
 - [x] Analytics + Habits: replaced hardcoded "40% more after 7h sleep" with real getSleepHabitInsight (hides/falls back when insufficient data)
 - [x] Tests for parseDurationInput, formatMinutes, autoClassifyTaskType, getEstimationStats, getSleepHabitInsight (estimation.test.ts)
 - [x] TypeScript clean, 38/38 tests pass
+
+## Analytics: Hours by Type vs Category (side by side)
+- [x] store.ts: getHoursByType (actual > estimate > 1h fallback), folds untyped into Other
+- [x] store.ts: getHoursByCategory with category metadata
+- [x] Analytics: two equal-width HoursPanel cards in grid-cols-1 md:grid-cols-2, shared max scale, stack on mobile
+- [x] Tests for both aggregation helpers (hoursBreakdown.test.ts)
+- [x] TypeScript clean, 41/41 tests pass
+- [x] Add "Admin" as a 9th task type (keywords: admin/invoice/tax/paperwork/etc.); appears in picker + Hours by Type

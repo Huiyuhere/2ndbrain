@@ -64,6 +64,7 @@ describe('autoClassifyTaskType', () => {
     expect(autoClassifyTaskType('Design the new logo')).toBe('design');
     expect(autoClassifyTaskType('Email the client back')).toBe('communication');
     expect(autoClassifyTaskType('Morning gym session')).toBe('exercise');
+    expect(autoClassifyTaskType('Submit tax invoice')).toBe('admin');
   });
   it('returns undefined when nothing matches', () => {
     expect(autoClassifyTaskType('Buy groceries xyz')).toBeUndefined();
