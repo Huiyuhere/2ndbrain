@@ -204,6 +204,19 @@ export const reflections = mysqlTable("reflections", {
 
 export type ReflectionRow = typeof reflections.$inferSelect;
 
+// ─── AI Reflection Insights (CEO-mentor review, cached per period) ──────────────
+
+export const reflectionInsights = mysqlTable("reflection_insights", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  period: mysqlEnum("period", ["weekly", "monthly", "quarterly"]).notNull(),
+  periodKey: varchar("periodKey", { length: 16 }).notNull(), // e.g. 2026-W24, 2026-06, 2026-Q2
+  content: text("content"), // markdown body of the insight
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+});
+
+export type ReflectionInsightRow = typeof reflectionInsights.$inferSelect;
+
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export const projects = mysqlTable("projects", {

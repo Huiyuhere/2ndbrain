@@ -19,7 +19,7 @@ const CACHE_TTL_MS = 60_000; // retry every 60s until owner row exists
 /** Hardcoded workspace owner ID. The DB has a single shared workspace under userId=1. */
 const HARDCODED_OWNER_ID = 1;
 
-async function getWorkspaceOwnerId(): Promise<number> {
+export async function getWorkspaceOwnerId(): Promise<number> {
   if (_cachedWorkspaceOwnerId !== null) return _cachedWorkspaceOwnerId;
   const now = Date.now();
   // Try resolving from env (in case the owner row uses a different ID), but fall back to hardcoded.

@@ -43,6 +43,13 @@ import {
   deleteTimeBlock,
 } from "./db";
 
+import {
+  getOrGenerateInsight,
+  generateInsight,
+  getPeriodKey,
+  type Period,
+} from "./insights";
+
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
 const SubtaskSchema = z.object({ id: z.string(), title: z.string(), done: z.boolean() });
@@ -447,6 +454,48 @@ export const appRouter = router({
           answers: (input.answers ?? null) as Record<string, string> | null,
         });
         return { success: true };
+      }),
+  }),
+
+  // ─── Reflection Insights (AI CEO-mentor review) ──────────────────────────────
+  insights: router({
+    // Returns the cached insight for a period (or null if none generated yet).
+    get: workspaceProcedure
+      .input(
+        z.object({
+          period: z.enum(["weekly", "monthly", "quarterly"]),
+          periodKey: z.string().optional(),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        const period = input.period as Period;
+        const periodKey = input.periodKey || getPeriodKey(period);
+        const { getReflectionInsight } = await import("./db");
+        const row = await getReflectionInsight(ctx.workspaceOwnerId!, period, periodKey);
+        return {
+          periodKey,
+          content: row?.content ?? null,
+          generatedAt: row?.generatedAt ?? null,
+        };
+      }),
+    // Generates (caching) the insight; pass refresh:true to force regenerate.
+    generate: workspaceProcedure
+      .input(
+        z.object({
+          period: z.enum(["weekly", "monthly", "quarterly"]),
+          periodKey: z.string().optional(),
+          refresh: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const period = input.period as Period;
+        const periodKey = input.periodKey || getPeriodKey(period);
+        if (input.refresh) {
+          const { content } = await generateInsight(ctx.workspaceOwnerId!, period, periodKey);
+          return { periodKey, content, cached: false, generatedAt: new Date() };
+        }
+        const result = await getOrGenerateInsight(ctx.workspaceOwnerId!, period, periodKey);
+        return { periodKey, ...result };
       }),
   }),
 

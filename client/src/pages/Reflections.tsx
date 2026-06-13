@@ -4,6 +4,7 @@ import { getTodayString, getTodayLabel } from '@/lib/store';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '@/components/BackButton';
+import InsightPanel from '@/components/InsightPanel';
 
 type Tab = 'weekly' | 'monthly' | 'quarterly';
 
@@ -182,6 +183,9 @@ export default function Reflections() {
           </p>
         )}
       </div>
+
+      {/* AI INSIGHTS PANEL (collapsed by default) */}
+      <InsightPanel period={tab} />
 
       {/* TODAY'S REFLECTION FORM or SAVED CARD */}
       <AnimatePresence mode="wait">

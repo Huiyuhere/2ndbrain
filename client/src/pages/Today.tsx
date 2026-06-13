@@ -4,6 +4,7 @@ import { getTodayString, getTodayLabel } from '@/lib/store';
 import UserAvatar from '@/components/UserAvatar';
 import TaskCard from '@/components/TaskCard';
 import GoalBanner from '@/components/GoalBanner';
+import QuoteBanner from '@/components/QuoteBanner';
 import WeekStrip from '@/components/WeekStrip';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -155,6 +156,9 @@ export default function Today() {
           <UserAvatar size={36} />
         </div>
       </div>
+
+      {/* QUOTE OF THE DAY */}
+      <QuoteBanner />
 
       {/* FOCUS BANNER — always tied to today's mood entry */}
       <GoalBanner compact focusOverride={todayMood?.focus || undefined} />

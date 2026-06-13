@@ -447,12 +447,23 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
                     )}
                   </div>
                 )}
-                <button
-                  onClick={() => setRepeatOpen(false)}
-                  className="mt-2 text-[11px] font-semibold text-[var(--muted-foreground)] hover:text-[var(--sky)] transition-colors"
-                >
-                  Done
-                </button>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <button
+                    onClick={() => setRepeatOpen(false)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white btn-sky transition-all active:scale-[0.97]"
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (task.recurFreq) updateTask(task.id, { recurFreq: null, recurEndDate: null });
+                      setRepeatOpen(false);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--muted-foreground)] border border-[var(--border)] hover:text-[var(--sky)] hover:border-[var(--sky)] transition-all active:scale-[0.97]"
+                  >
+                    Cancel
+                  </button>
+                </div>
                 </>
                 )}
               </div>

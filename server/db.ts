@@ -8,6 +8,7 @@ import {
   habits,
   InsertUser,
   moodEntries,
+  reflectionInsights,
   reflections,
   roadmapProjects,
   tasks,
@@ -367,6 +368,56 @@ import {
   ProjectTaskRow,
   ProjectMilestoneRow,
 } from "../drizzle/schema";
+
+export async function getReflectionInsight(
+  userId: number,
+  period: "weekly" | "monthly" | "quarterly",
+  periodKey: string
+) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db
+    .select()
+    .from(reflectionInsights)
+    .where(
+      and(
+        eq(reflectionInsights.userId, userId),
+        eq(reflectionInsights.period, period),
+        eq(reflectionInsights.periodKey, periodKey)
+      )
+    )
+    .limit(1);
+  return rows[0];
+}
+
+export async function upsertReflectionInsight(
+  userId: number,
+  period: "weekly" | "monthly" | "quarterly",
+  periodKey: string,
+  content: string
+) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db
+    .select()
+    .from(reflectionInsights)
+    .where(
+      and(
+        eq(reflectionInsights.userId, userId),
+        eq(reflectionInsights.period, period),
+        eq(reflectionInsights.periodKey, periodKey)
+      )
+    )
+    .limit(1);
+  if (existing[0]) {
+    await db
+      .update(reflectionInsights)
+      .set({ content, generatedAt: new Date() })
+      .where(eq(reflectionInsights.id, existing[0].id));
+  } else {
+    await db.insert(reflectionInsights).values({ userId, period, periodKey, content });
+  }
+}
 
 export async function getProjects(userId: number): Promise<ProjectRow[]> {
   const db = await getDb();

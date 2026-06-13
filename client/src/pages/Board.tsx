@@ -3,7 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { filterTasksByMode, Task, autoClassify, getTodayLabel } from '@/lib/store';
 import UserAvatar from '@/components/UserAvatar';
 import BottomNav from '@/components/BottomNav';
-import GoalBanner from '@/components/GoalBanner';
+import QuoteBanner from '@/components/QuoteBanner';
 import MorningCheckin from '@/components/MorningCheckin';
 import TaskCard from '@/components/TaskCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -92,7 +92,7 @@ export default function Board() {
       </div>
 
       {/* GOAL BANNER */}
-      <GoalBanner />
+      <QuoteBanner />
 
       {/* FOCUS MODE SWITCHER */}
       <div className="px-4 mt-3 flex gap-2">

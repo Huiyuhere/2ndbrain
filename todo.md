@@ -192,3 +192,21 @@
 - [x] Tests for recurrence (occursOn/blocksOnDate/tasksOnDate) + .ics (buildICS) + smart duration; 57/57 pass; tsc clean
 - [x] Fixed brain.routers test mock to include new db helpers
 - [x] Calendar scheduling modal: auto-infer/preselect duration from [Xh]/[Xm] bracket in title (adds custom chip when not a preset)
+
+## Quote of the Day + Monthly Reflection Insights
+- [ ] store.ts: curated QUOTES list + getQuoteOfDay() deterministic by calendar day
+- [ ] Replace big Q2 banner with QuoteBanner on Board, Today, Habits (Q2 goal stays in sidebar)
+- [ ] Backend: tRPC procedure to generate monthly reflection insights via LLM (combines tasks/estimation, mood, sleep/habits, journal/reflections)
+- [ ] Cache insights per month (schema table) so it isn't re-billed on every open
+- [ ] Reflections Month view: "Show this month's insights" panel above the monthly reflection entry
+- [ ] Tests (getQuoteOfDay determinism, insights data assembly); tsc clean; checkpoint
+
+## Quote of the Day + Reflection Insights (monthly + quarterly)
+- [ ] store.ts: curated QUOTES list + getQuoteOfDay() deterministic by calendar day
+- [ ] Replace big Q2 banner with QuoteBanner on Board, Today, Habits (Q2 goal stays in sidebar)
+- [ ] Backend: tRPC procedure to generate reflection insights via LLM for a given period (month/quarter), combining tasks/estimation, mood, sleep/habits, journal/reflections
+- [ ] Cache insights per period (schema table keyed by period type+key) so it isn't re-billed on every open
+- [ ] Reflections Month view: "Show this month's insights" panel above the monthly reflection entry
+- [ ] Reflections Quarter view: "Show this quarter's insights" panel above the quarterly reflection entry
+- [ ] Tests (getQuoteOfDay determinism, period range + insights data assembly); tsc clean; checkpoint
+- [ ] Insights tone: "CEO mentor" — direct, calls out leaky buckets/excuses, ends with non-negotiable orders (grounded in real data only)

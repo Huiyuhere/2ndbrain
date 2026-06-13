@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getTodayString, toLocalDateStr, getSleepHabitInsight } from '@/lib/store';
-import GoalBanner from '@/components/GoalBanner';
+import QuoteBanner from '@/components/QuoteBanner';
 import { toast } from 'sonner';
 
 const DAYS_SHORT = ['M','T','W','T','F','S','S'];
@@ -89,7 +89,7 @@ export default function Habits() {
         </button>
       </div>
 
-      <GoalBanner compact />
+      <QuoteBanner />
 
       {/* WEEKLY SCORE */}
       <div className="mx-4 mt-4 p-4 rounded-2xl border border-[var(--border)] bg-white flex items-center gap-4">
