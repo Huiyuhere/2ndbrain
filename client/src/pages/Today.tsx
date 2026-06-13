@@ -5,7 +5,6 @@ import UserAvatar from '@/components/UserAvatar';
 import TaskCard from '@/components/TaskCard';
 import GoalBanner from '@/components/GoalBanner';
 import QuoteBanner from '@/components/QuoteBanner';
-import WeekStrip from '@/components/WeekStrip';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Compute YYYY-MM-DD for a given offset back from today (in local TZ)
@@ -162,9 +161,6 @@ export default function Today() {
 
       {/* FOCUS BANNER — always tied to today's mood entry */}
       <GoalBanner compact focusOverride={todayMood?.focus || undefined} />
-
-      {/* WEEK STRIP — shared component */}
-      <WeekStrip />
 
       {/* HABIT STRIP */}
       <div className="section-hdr mt-4">

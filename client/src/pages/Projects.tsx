@@ -860,13 +860,9 @@ export default function Projects() {
     <div className="pb-8">
       {/* Topbar */}
       <div className="topbar">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="topbar-title">🗂️ Projects</h1>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {activeProjects.length}/3 active · Gantt view
-            </p>
-          </div>
+        <div>
+          <div className="topbar-title">🗂️ Projects</div>
+          <div className="topbar-sub">{activeProjects.length}/3 active · Gantt view</div>
         </div>
         <button
           onClick={openAddProject}

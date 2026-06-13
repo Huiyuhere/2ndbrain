@@ -190,6 +190,10 @@
   position: relative;
   overflow: hidden;
 }
+/* Silver variant — used for Today's intention */
+.goal-banner.silver {
+  background: linear-gradient(135deg, #B8C0CC, #E2E8F0);
+}
 .goal-banner::before {
   content: '';
   position: absolute;

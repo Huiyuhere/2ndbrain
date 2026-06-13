@@ -29,8 +29,9 @@
 - [x] Monthly/quarterly self-guard to true last day (handles month lengths/leap years)
 - [x] Generates insight + notifyOwner "Your <period> review is ready"
 - [x] Mounted in index.ts before Vite/static fallthrough
-- [ ] Create 3 project-level crons via manus-heartbeat AFTER deploy (weekly Sun, monthly daily, quarterly daily — all 09:00 UTC = SGT 17:00)
+- [x] Created 3 project-level crons via manus-heartbeat (weekly Sun, monthly daily, quarterly daily — all 09:00 UTC = SGT 17:00); all enabled, next run 2026-06-14T09:00Z
+- [x] Verified production endpoint reachable + auth-guarded (403 to non-cron)
 
 ## Wrap
 - [x] Tests: 70/70 pass (13 new insights tests); tsc 0 errors
-- [ ] Checkpoint + ask user to Deploy (required before creating crons)
+- [x] Checkpoint saved + user deployed; crons registered against production URL

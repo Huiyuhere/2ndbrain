@@ -8,11 +8,11 @@ export default function GoalBanner({ compact = false, focusOverride }: { compact
     // If a focus override is provided (Today page), show today's intention instead of quarterly goal
     if (focusOverride) {
       return (
-        <div className="goal-banner mx-4 mt-3 p-3 flex items-center gap-3">
+        <div className="goal-banner silver mx-4 mt-3 p-3 flex items-center gap-3">
           <span className="text-lg">☀️</span>
           <div className="flex-1 min-w-0">
-            <p className="text-white/60 text-[9px] font-semibold uppercase tracking-widest mb-0.5">Today's intention</p>
-            <p className="text-white text-xs font-semibold leading-snug line-clamp-1">{focusOverride}</p>
+            <p className="text-slate-600 text-[9px] font-semibold uppercase tracking-widest mb-0.5">Today's intention</p>
+            <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-1">{focusOverride}</p>
           </div>
         </div>
       );
