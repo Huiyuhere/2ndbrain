@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import {
-  AppState, Task, Habit, MoodEntry, EveningEntry, Goal, Reflection,
+  AppState, Task, TimeBlock, Habit, MoodEntry, EveningEntry, Goal, Reflection,
   Category, RoadmapProject, UserProfile,
   getTodayString, autoClassify, getStreak, parseTitleDuration, autoClassifyTaskType,
 } from '@/lib/store';
@@ -25,6 +25,7 @@ function buildDefaultState(): AppState {
     focusMode: 'life',
     categories: DEFAULT_CATEGORIES,
     tasks: [],
+    timeBlocks: [],
     habits: [],
     moodEntries: [],
     eveningEntries: [],
@@ -68,6 +69,9 @@ type AppContextType = {
   logActualTime: (id: string, minutes: number) => void;
   pendingCompletion: Task | null;
   setPendingCompletion: (task: Task | null) => void;
+  addTimeBlock: (block: Omit<TimeBlock, 'id' | 'createdAt'>) => TimeBlock;
+  updateTimeBlock: (id: string, updates: Partial<TimeBlock>) => void;
+  deleteTimeBlock: (id: string) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -83,6 +87,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Mutations ──────────────────────────────────────────────────────────────
   const upsertTask = trpc.tasks.upsert.useMutation();
   const deleteTaskMut = trpc.tasks.delete.useMutation();
+  const upsertTimeBlock = trpc.timeBlocks.upsert.useMutation();
+  const deleteTimeBlockMut = trpc.timeBlocks.delete.useMutation();
   const upsertHabit = trpc.habits.upsert.useMutation();
   const deleteHabitMut = trpc.habits.delete.useMutation();
   const toggleHabitMut = trpc.habits.toggle.useMutation();
@@ -133,6 +139,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       actualMinutes: t.actualMinutes ?? undefined,
       createdAt: t.createdAt,
       completedAt: t.completedAt ?? undefined,
+      recurFreq: (t.recurFreq as Task['recurFreq']) ?? undefined,
+      recurEndDate: t.recurEndDate ?? undefined,
+    }));
+
+    const timeBlocks: TimeBlock[] = (d.timeBlocks ?? []).map(b => ({
+      id: b.id, title: b.title, date: b.date,
+      startMin: b.startMin, endMin: b.endMin,
+      categoryId: b.categoryId ?? undefined,
+      taskType: b.taskType ?? undefined,
+      recurFreq: (b.recurFreq as TimeBlock['recurFreq']) ?? undefined,
+      recurEndDate: b.recurEndDate ?? undefined,
+      createdAt: b.createdAt,
     }));
 
     // Build habits with completedDates from habit_completions
@@ -195,6 +213,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       focusMode: (profile?.focusMode as AppState['focusMode']) ?? 'life',
       categories,
       tasks,
+      timeBlocks,
       habits,
       moodEntries,
       eveningEntries,
@@ -286,6 +305,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return { ...s, tasks: updated };
     });
+  }, []);
+
+  const addTimeBlock = useCallback((block: Omit<TimeBlock, 'id' | 'createdAt'>): TimeBlock => {
+    const newBlock: TimeBlock = { ...block, id: nanoid(), createdAt: getTodayString() };
+    setState(s => ({ ...s, timeBlocks: [...s.timeBlocks, newBlock] }));
+    upsertTimeBlock.mutate(newBlock);
+    return newBlock;
+  }, []);
+
+  const updateTimeBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
+    setState(s => {
+      const updated = s.timeBlocks.map(b => b.id === id ? { ...b, ...updates } : b);
+      const block = updated.find(b => b.id === id);
+      if (block) upsertTimeBlock.mutate(block);
+      return { ...s, timeBlocks: updated };
+    });
+  }, []);
+
+  const deleteTimeBlock = useCallback((id: string) => {
+    setState(s => ({ ...s, timeBlocks: s.timeBlocks.filter(b => b.id !== id) }));
+    deleteTimeBlockMut.mutate({ id });
   }, []);
 
   const logActualTime = useCallback((id: string, minutes: number) => {
@@ -435,6 +475,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addHabit, deleteHabit, addGoal, deleteGoal, addProject, updateProject, deleteProject,
       updateProfile, updateMonthlyIntention,
       logActualTime, pendingCompletion, setPendingCompletion,
+      addTimeBlock, updateTimeBlock, deleteTimeBlock,
     }}>
       {children}
       <ActualTimeModal />

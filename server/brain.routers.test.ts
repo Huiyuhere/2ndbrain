@@ -42,6 +42,18 @@ vi.mock("./db", () => ({
   upsertUser: vi.fn().mockResolvedValue(undefined),
   getUserByOpenId: vi.fn().mockResolvedValue(undefined),
   bulkInsertHabitCompletions: vi.fn().mockResolvedValue(undefined),
+  getTimeBlocks: vi.fn().mockResolvedValue([]),
+  upsertTimeBlock: vi.fn().mockResolvedValue(undefined),
+  deleteTimeBlock: vi.fn().mockResolvedValue(undefined),
+  getProjects: vi.fn().mockResolvedValue([]),
+  upsertProject: vi.fn().mockResolvedValue(undefined),
+  deleteProject: vi.fn().mockResolvedValue(undefined),
+  getProjectTasks: vi.fn().mockResolvedValue([]),
+  upsertProjectTask: vi.fn().mockResolvedValue(undefined),
+  deleteProjectTask: vi.fn().mockResolvedValue(undefined),
+  getProjectMilestones: vi.fn().mockResolvedValue([]),
+  upsertProjectMilestone: vi.fn().mockResolvedValue(undefined),
+  deleteProjectMilestone: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { appRouter } from "./routers";

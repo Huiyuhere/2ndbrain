@@ -14,8 +14,6 @@ type Props = {
 export default function TaskCard({ task, showBorder = false, draggable: isDraggable = false, onDragStart }: Props) {
   const { updateTask, deleteTask, moveTask, state } = useApp();
   const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(task.title);
   const [newLink, setNewLink] = useState({ label: '', url: '' });
   const [addingLink, setAddingLink] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -91,11 +89,6 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
   function handleEditableKeyDown(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); }
     else if (e.key === 'Escape') { (e.target as HTMLElement).blur(); }
-  }
-
-  function saveEdit() {
-    updateTask(task.id, { title: editTitle });
-    setEditing(false);
   }
 
   function addLink() {
@@ -395,31 +388,54 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
                 </button>
               )}
 
-              {/* Edit / Delete */}
-              <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                {editing ? (
-                  <div className="flex-1 flex gap-2">
+              {/* Repeat */}
+              <div className="mb-3" onClick={e => e.stopPropagation()}>
+                <p className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Repeat
+                </p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {([['none', "Doesn't repeat"], ['daily', 'Daily'], ['weekly', 'Weekly']] as const).map(([val, label]) => {
+                    const current = task.recurFreq ?? 'none';
+                    const active = current === val;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => updateTask(task.id, {
+                          recurFreq: val === 'none' ? null : val,
+                          recurEndDate: val === 'none' ? null : task.recurEndDate,
+                        })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
+                          active ? 'border-transparent text-white btn-sky' : 'border-[var(--border)] text-[var(--muted-foreground)]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {task.recurFreq && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--muted-foreground)]">Until</span>
                     <input
-                      className="flex-1 border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[var(--sky)]"
-                      value={editTitle}
-                      onChange={e => setEditTitle(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && saveEdit()}
+                      type="date"
+                      value={task.recurEndDate ?? ''}
+                      onChange={e => updateTask(task.id, { recurEndDate: e.target.value || null })}
+                      className="border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[var(--sky)]"
                     />
-                    <button onClick={saveEdit} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white btn-sky">Save</button>
-                    <button onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg text-xs border border-[var(--border)]">✕</button>
+                    {task.recurEndDate && (
+                      <button onClick={() => updateTask(task.id, { recurEndDate: null })} className="text-[11px] text-[var(--muted-foreground)] hover:text-[var(--sky)]">clear</button>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    <button onClick={() => setEditing(true)} className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--sky)] hover:text-[var(--sky)] transition-all flex items-center justify-center gap-1.5">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      Edit
-                    </button>
-                    <button onClick={() => deleteTask(task.id)} className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:border-red-300 hover:text-red-400 transition-all flex items-center justify-center gap-1.5">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      Delete
-                    </button>
-                  </>
                 )}
+              </div>
+
+              {/* Delete */}
+              <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                <button onClick={() => deleteTask(task.id)} className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--muted-foreground)] hover:border-red-300 hover:text-red-400 transition-all flex items-center justify-center gap-1.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  Delete
+                </button>
               </div>
             </div>
           </motion.div>

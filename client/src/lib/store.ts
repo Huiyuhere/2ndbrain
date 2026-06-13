@@ -25,6 +25,24 @@ export type Task = {
   actualMinutes?: number; // actual time taken, logged on completion
   createdAt: string;
   completedAt?: string;
+  recurFreq?: 'daily' | 'weekly' | null; // recurring schedule
+  recurEndDate?: string | null; // YYYY-MM-DD inclusive
+};
+
+export type RecurFreq = 'daily' | 'weekly';
+
+/** A calendar-only time block (not a task). */
+export type TimeBlock = {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD (anchor)
+  startMin: number; // minutes from midnight
+  endMin: number;
+  categoryId?: string | null;
+  taskType?: string | null;
+  recurFreq?: RecurFreq | null;
+  recurEndDate?: string | null;
+  createdAt: string;
 };
 
 export type Habit = {
@@ -95,6 +113,7 @@ export type AppState = {
   focusMode: 'life' | 'work' | 'type' | 'personal';
   categories: Category[];
   tasks: Task[];
+  timeBlocks: TimeBlock[];
   habits: Habit[];
   moodEntries: MoodEntry[];
   eveningEntries: EveningEntry[];
@@ -179,6 +198,7 @@ function getDefaultState(): AppState {
     focusMode: 'life',
     categories: DEFAULT_CATEGORIES,
     tasks: DEFAULT_TASKS,
+    timeBlocks: [],
     habits: DEFAULT_HABITS,
     moodEntries: DEFAULT_MOOD,
     eveningEntries: DEFAULT_EVENING,
@@ -241,6 +261,159 @@ export function getWeekDates(): string[] {
     d.setUTCDate(monday.getUTCDate() + i);
     return toLocalDateStr(d);
   });
+}
+
+/**
+ * Calendar day strip: past 2 days, today, and the next 10 days (13 dates).
+ * Returns YYYY-MM-DD strings in SGT order, oldest first.
+ */
+export function getCalendarRange(): string[] {
+  const now = new Date();
+  const today = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const dates: string[] = [];
+  for (let offset = -2; offset <= 10; offset++) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() + offset);
+    dates.push(toLocalDateStr(d));
+  }
+  return dates;
+}
+
+/** Day-of-week (0=Sun..6=Sat) for a YYYY-MM-DD string, timezone-safe. */
+export function weekdayOf(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+/**
+ * Does a recurring item (anchored at `anchorDate` with freq/endDate)
+ * have an occurrence on `targetDate`? Non-recurring items match only their own date.
+ */
+export function occursOn(
+  anchorDate: string,
+  targetDate: string,
+  freq?: RecurFreq | null,
+  endDate?: string | null,
+): boolean {
+  if (!freq) return anchorDate === targetDate;
+  if (targetDate < anchorDate) return false; // before it started
+  if (endDate && targetDate > endDate) return false; // after it ended
+  if (freq === 'daily') return true;
+  if (freq === 'weekly') return weekdayOf(anchorDate) === weekdayOf(targetDate);
+  return false;
+}
+
+/** Time blocks (with recurrence expanded) that fall on a given date. */
+export function blocksOnDate(blocks: TimeBlock[], dateStr: string): TimeBlock[] {
+  return blocks
+    .filter(b => occursOn(b.date, dateStr, b.recurFreq, b.recurEndDate))
+    .sort((a, b) => a.startMin - b.startMin);
+}
+
+/** Tasks scheduled on a given date, expanding recurrence. */
+export function tasksOnDate(tasks: Task[], dateStr: string): Task[] {
+  return tasks.filter(t => {
+    if (!t.scheduledDate) return false;
+    return occursOn(t.scheduledDate, dateStr, t.recurFreq, t.recurEndDate);
+  });
+}
+
+/** Format minutes-from-midnight as "9:00 AM". */
+export function minToLabel(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+/** Parse "HH:MM" (24h) into minutes from midnight; returns null if invalid. */
+export function timeToMin(hhmm: string): number | null {
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]); const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/** Convert minutes from midnight to "HH:MM" (24h) for inputs. */
+export function minToTime(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// ─── iCalendar (.ics) export ──────────────────────────────────────────────
+
+function icsEscape(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+
+/** Format a YYYY-MM-DD + minutes into a floating local DTSTART/DTEND (no Z). */
+function icsDateTime(dateStr: string, min: number): string {
+  const [y, mo, d] = dateStr.split('-');
+  const h = String(Math.floor(min / 60)).padStart(2, '0');
+  const mm = String(min % 60).padStart(2, '0');
+  return `${y}${mo}${d}T${h}${mm}00`;
+}
+
+function icsRRule(freq?: RecurFreq | null, endDate?: string | null): string | null {
+  if (!freq) return null;
+  let rule = `RRULE:FREQ=${freq === 'daily' ? 'DAILY' : 'WEEKLY'}`;
+  if (endDate) {
+    const [y, mo, d] = endDate.split('-');
+    rule += `;UNTIL=${y}${mo}${d}T235900`;
+  }
+  return rule;
+}
+
+/**
+ * Build an iCalendar string from time blocks and scheduled tasks.
+ * Time blocks become timed VEVENTs; scheduled tasks with a time become timed
+ * events (default 30m), tasks without a time become all-day events.
+ */
+export function buildICS(blocks: TimeBlock[], tasks: Task[]): string {
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//2nd Brain//Calendar//EN',
+    'CALSCALE:GREGORIAN',
+  ];
+  const stamp = icsDateTime(getTodayString(), 0) + 'Z';
+
+  for (const b of blocks) {
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:block-${b.id}@2ndbrain`);
+    lines.push(`DTSTAMP:${stamp}`);
+    lines.push(`DTSTART:${icsDateTime(b.date, b.startMin)}`);
+    lines.push(`DTEND:${icsDateTime(b.date, b.endMin)}`);
+    lines.push(`SUMMARY:${icsEscape(b.title)}`);
+    const rrule = icsRRule(b.recurFreq, b.recurEndDate);
+    if (rrule) lines.push(rrule);
+    lines.push('END:VEVENT');
+  }
+
+  for (const t of tasks) {
+    if (!t.scheduledDate) continue;
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:task-${t.id}@2ndbrain`);
+    lines.push(`DTSTAMP:${stamp}`);
+    const startMin = t.scheduledTime ? timeToMin(t.scheduledTime) : null;
+    if (startMin != null) {
+      lines.push(`DTSTART:${icsDateTime(t.scheduledDate, startMin)}`);
+      lines.push(`DTEND:${icsDateTime(t.scheduledDate, Math.min(startMin + 30, 24 * 60 - 1))}`);
+    } else {
+      const [y, mo, d] = t.scheduledDate.split('-');
+      lines.push(`DTSTART;VALUE=DATE:${y}${mo}${d}`);
+    }
+    lines.push(`SUMMARY:${icsEscape(t.title)}`);
+    const rrule = icsRRule(t.recurFreq, t.recurEndDate);
+    if (rrule) lines.push(rrule);
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }
 
 export function getStreak(habits: Habit[]): number {

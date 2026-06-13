@@ -50,6 +50,13 @@
       "when": 1781008987669,
       "tag": "0006_nice_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1781359663896,
+      "tag": "0007_abandoned_jean_grey",
+      "breakpoints": true
     }
   ]
 }

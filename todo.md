@@ -177,3 +177,18 @@
 - [x] Tests for both aggregation helpers (hoursBreakdown.test.ts)
 - [x] TypeScript clean, 41/41 tests pass
 - [x] Add "Admin" as a 9th task type (keywords: admin/invoice/tax/paperwork/etc.); appears in picker + Hours by Type
+
+## Calendar: time blocks, recurrence, .ics export, range, edit-button cleanup
+- [x] Schema: time_blocks table + recurFreq/recurEndDate on tasks; pushed migration
+- [x] db.ts + routers.ts: CRUD for timeBlocks; persist task recurrence; loadAll returns timeBlocks
+- [x] AppContext + store.ts: timeBlocks state, addTimeBlock/updateTimeBlock/deleteTimeBlock, occursOn/blocksOnDate/tasksOnDate recurrence helpers
+- [x] Calendar day strip: past 2 days · today · next 10 days (default today; today outlined)
+- [x] Calendar grid: render time blocks (left lane) + scheduled tasks (right lane), tap empty slot to create, tap block to edit
+- [x] Time block editor (TimeBlockModal): title + start/end + optional category + type + repeat + delete
+- [x] Recurring tasks: Repeat control (Doesn't repeat/Daily/Weekly + Until date) in task detail; occurrences expand on Calendar with ↻ marker
+- [x] Recurring time blocks: same repeat options in TimeBlockModal; expand across range
+- [x] .ics export: Export button downloads iCalendar (timed VEVENTs, all-day for untimed tasks, RRULE+UNTIL for recurrence)
+- [x] Remove "Edit" button from task detail panel (Delete kept full-width; title/fields stay inline-editable)
+- [x] Tests for recurrence (occursOn/blocksOnDate/tasksOnDate) + .ics (buildICS) + smart duration; 57/57 pass; tsc clean
+- [x] Fixed brain.routers test mock to include new db helpers
+- [x] Calendar scheduling modal: auto-infer/preselect duration from [Xh]/[Xm] bracket in title (adds custom chip when not a preset)

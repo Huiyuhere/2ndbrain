@@ -78,9 +78,29 @@ export const tasks = mysqlTable("tasks", {
   actualMinutes: int("actualMinutes"),
   createdAt: varchar("createdAt", { length: 10 }).notNull(),
   completedAt: varchar("completedAt", { length: 10 }),
+  // Recurrence (optional): a task with recurFreq generates occurrences up to recurEndDate.
+  recurFreq: mysqlEnum("recurFreq", ["daily", "weekly"]),
+  recurEndDate: varchar("recurEndDate", { length: 10 }), // YYYY-MM-DD inclusive
 });
 
 export type TaskRow = typeof tasks.$inferSelect;
+
+// ─── Time blocks (calendar-only, not tasks) ──────────────────────────────
+export const timeBlocks = mysqlTable("time_blocks", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD (anchor date for recurring)
+  startMin: int("startMin").notNull(), // minutes from midnight
+  endMin: int("endMin").notNull(),
+  categoryId: varchar("categoryId", { length: 64 }),
+  taskType: varchar("taskType", { length: 32 }),
+  recurFreq: mysqlEnum("recurFreq", ["daily", "weekly"]),
+  recurEndDate: varchar("recurEndDate", { length: 10 }),
+  createdAt: varchar("createdAt", { length: 10 }).notNull(),
+});
+
+export type TimeBlockRow = typeof timeBlocks.$inferSelect;
 
 // ─── Habits ───────────────────────────────────────────────────────────────────
 

@@ -38,6 +38,9 @@ import {
   getProjectMilestones,
   upsertProjectMilestone,
   deleteProjectMilestone,
+  getTimeBlocks,
+  upsertTimeBlock,
+  deleteTimeBlock,
 } from "./db";
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
@@ -62,6 +65,21 @@ const TaskSchema = z.object({
   actualMinutes: z.number().optional(),
   createdAt: z.string(),
   completedAt: z.string().optional(),
+  recurFreq: z.enum(["daily", "weekly"]).optional().nullable(),
+  recurEndDate: z.string().optional().nullable(),
+});
+
+const TimeBlockSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  date: z.string(),
+  startMin: z.number(),
+  endMin: z.number(),
+  categoryId: z.string().optional().nullable(),
+  taskType: z.string().optional().nullable(),
+  recurFreq: z.enum(["daily", "weekly"]).optional().nullable(),
+  recurEndDate: z.string().optional().nullable(),
+  createdAt: z.string(),
 });
 
 const HabitSchema = z.object({
@@ -232,6 +250,8 @@ export const appRouter = router({
           actualMinutes: input.actualMinutes ?? null,
           createdAt: input.createdAt,
           completedAt: input.completedAt ?? null,
+          recurFreq: input.recurFreq ?? null,
+          recurEndDate: input.recurEndDate ?? null,
         });
         return { success: true };
       }),
@@ -239,6 +259,37 @@ export const appRouter = router({
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
         await deleteTask(ctx.workspaceOwnerId!, input.id);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Time blocks ────────────────────────────────────────────
+  timeBlocks: router({
+    list: workspaceProcedure.query(async ({ ctx }) => {
+      return getTimeBlocks(ctx.workspaceOwnerId!);
+    }),
+    upsert: workspaceProcedure
+      .input(TimeBlockSchema)
+      .mutation(async ({ ctx, input }) => {
+        await upsertTimeBlock(ctx.workspaceOwnerId!, {
+          id: input.id,
+          userId: ctx.workspaceOwnerId!,
+          title: input.title,
+          date: input.date,
+          startMin: input.startMin,
+          endMin: input.endMin,
+          categoryId: input.categoryId ?? null,
+          taskType: input.taskType ?? null,
+          recurFreq: input.recurFreq ?? null,
+          recurEndDate: input.recurEndDate ?? null,
+          createdAt: input.createdAt,
+        });
+        return { success: true };
+      }),
+    delete: workspaceProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteTimeBlock(ctx.workspaceOwnerId!, input.id);
         return { success: true };
       }),
   }),
@@ -496,7 +547,7 @@ export const appRouter = router({
 
     loadAll: workspaceProcedure.query(async ({ ctx }) => {
       const userId = ctx.workspaceOwnerId!;
-      const [profile, cats, taskList, habitData, goalList, roadmapList, moodList, eveningList, reflectionList] =
+      const [profile, cats, taskList, habitData, goalList, roadmapList, moodList, eveningList, reflectionList, tbList] =
         await Promise.all([
           getOrCreateProfile(userId),
           getCategories(userId),
@@ -507,6 +558,7 @@ export const appRouter = router({
           getMoodEntries(userId),
           getEveningEntries(userId),
           getReflections(userId),
+          getTimeBlocks(userId),
         ]);
       return {
         profile,
@@ -519,6 +571,7 @@ export const appRouter = router({
         moodEntries: moodList,
         eveningEntries: eveningList,
         reflections: reflectionList,
+        timeBlocks: tbList,
       };
     }),
   }),

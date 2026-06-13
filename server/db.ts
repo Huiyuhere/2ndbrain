@@ -11,6 +11,7 @@ import {
   reflections,
   roadmapProjects,
   tasks,
+  timeBlocks,
   userProfiles,
   users,
 } from "../drizzle/schema";
@@ -127,6 +128,8 @@ export async function upsertTask(userId: number, task: typeof tasks.$inferInsert
       taskType: task.taskType ?? null,
       actualMinutes: task.actualMinutes ?? null,
       completedAt: task.completedAt ?? null,
+      recurFreq: task.recurFreq ?? null,
+      recurEndDate: task.recurEndDate ?? null,
     },
   });
 }
@@ -135,6 +138,36 @@ export async function deleteTask(userId: number, taskId: string) {
   const db = await getDb();
   if (!db) return;
   await db.delete(tasks).where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)));
+}
+
+// ─── Time blocks ─────────────────────────────────────────────
+export async function getTimeBlocks(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(timeBlocks).where(eq(timeBlocks.userId, userId));
+}
+
+export async function upsertTimeBlock(userId: number, block: typeof timeBlocks.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(timeBlocks).values({ ...block, userId }).onDuplicateKeyUpdate({
+    set: {
+      title: block.title,
+      date: block.date,
+      startMin: block.startMin,
+      endMin: block.endMin,
+      categoryId: block.categoryId ?? null,
+      taskType: block.taskType ?? null,
+      recurFreq: block.recurFreq ?? null,
+      recurEndDate: block.recurEndDate ?? null,
+    },
+  });
+}
+
+export async function deleteTimeBlock(userId: number, id: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(timeBlocks).where(and(eq(timeBlocks.id, id), eq(timeBlocks.userId, userId)));
 }
 
 // ─── Habits ───────────────────────────────────────────────────────────────────
