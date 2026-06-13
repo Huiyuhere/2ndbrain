@@ -21,6 +21,7 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
   const [showCatPicker, setShowCatPicker] = useState(false);
   const catPickerRef = useRef<HTMLDivElement>(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
+  const [repeatOpen, setRepeatOpen] = useState(false);
   const typePickerRef = useRef<HTMLDivElement>(null);
 
   // Close category picker when clicking outside
@@ -388,8 +389,26 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
                 </button>
               )}
 
-              {/* Repeat */}
+              {/* Repeat (collapsible, like Add link) */}
               <div className="mb-3" onClick={e => e.stopPropagation()}>
+                {!repeatOpen && !task.recurFreq ? (
+                  <button
+                    onClick={() => setRepeatOpen(true)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--sky)] transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Repeat
+                  </button>
+                ) : !repeatOpen && task.recurFreq ? (
+                  <button
+                    onClick={() => setRepeatOpen(true)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[var(--sky)] hover:opacity-80 transition-opacity"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    {task.recurFreq === 'daily' ? 'Daily' : 'Weekly'}{task.recurEndDate ? ` until ${new Date(task.recurEndDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
+                  </button>
+                ) : (
+                <>
                 <p className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2 flex items-center gap-1">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   Repeat
@@ -427,6 +446,14 @@ export default function TaskCard({ task, showBorder = false, draggable: isDragga
                       <button onClick={() => updateTask(task.id, { recurEndDate: null })} className="text-[11px] text-[var(--muted-foreground)] hover:text-[var(--sky)]">clear</button>
                     )}
                   </div>
+                )}
+                <button
+                  onClick={() => setRepeatOpen(false)}
+                  className="mt-2 text-[11px] font-semibold text-[var(--muted-foreground)] hover:text-[var(--sky)] transition-colors"
+                >
+                  Done
+                </button>
+                </>
                 )}
               </div>
 
