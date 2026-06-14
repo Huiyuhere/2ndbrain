@@ -72,6 +72,38 @@ export function getPeriodKey(period: Period, ref: Date = sgtNow()): string {
 }
 
 /**
+ * Returns the period key for the LAST COMPLETED period relative to the given
+ * reference date (default: now, in SGT). Weeks are Mon–Sun.
+ *  - weekly:    the Mon–Sun week immediately before the week that contains `ref`
+ *               (i.e. shift back 7 days from the Monday of the current week).
+ *  - monthly:   the previous calendar month.
+ *  - quarterly: the previous calendar quarter.
+ *
+ * This is what the Reflections UI defaults to, so a review always covers a
+ * finished period with real data rather than the in-progress one.
+ */
+export function getLastCompletedPeriodKey(period: Period, ref: Date = sgtNow()): string {
+  if (period === "weekly") {
+    // Monday of the week containing ref, then step back 7 days into last week.
+    const dayNr = (ref.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+    const monday = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate()));
+    monday.setUTCDate(monday.getUTCDate() - dayNr);
+    const lastWeekDay = new Date(monday);
+    lastWeekDay.setUTCDate(monday.getUTCDate() - 7);
+    return getPeriodKey("weekly", lastWeekDay);
+  }
+  if (period === "monthly") {
+    // First day of current month minus one day → some day in the previous month.
+    const prev = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 0));
+    return getPeriodKey("monthly", prev);
+  }
+  // quarterly: first month of current quarter, step back one day into prev quarter.
+  const qStartMonth = Math.floor(ref.getUTCMonth() / 3) * 3;
+  const prevQ = new Date(Date.UTC(ref.getUTCFullYear(), qStartMonth, 0));
+  return getPeriodKey("quarterly", prevQ);
+}
+
+/**
  * Inclusive [start, end] YYYY-MM-DD date strings (SGT) covered by a period key.
  * Supports the same key formats produced by getPeriodKey.
  */
@@ -114,7 +146,17 @@ export function getPeriodRange(period: Period, periodKey: string): { start: stri
 export function getPeriodLabel(period: Period, periodKey: string): string {
   if (period === "weekly") {
     const { start, end } = getPeriodRange(period, periodKey);
-    return `${start} → ${end}`;
+    const s = new Date(start + "T00:00:00Z");
+    const e = new Date(end + "T00:00:00Z");
+    const sMonth = s.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+    const eMonth = e.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+    const sDay = s.getUTCDate();
+    const eDay = e.getUTCDate();
+    const year = e.getUTCFullYear();
+    // "8–14 Jun 2026" or "29 Jun–5 Jul 2026" if it spans two months
+    return sMonth === eMonth
+      ? `${sDay}–${eDay} ${eMonth} ${year}`
+      : `${sDay} ${sMonth} – ${eDay} ${eMonth} ${year}`;
   }
   if (period === "monthly") {
     const [y, m] = periodKey.split("-");
@@ -390,7 +432,7 @@ ${DEPTH[period]}`;
 }
 
 function buildUserPrompt(brief: DataBrief): string {
-  return `Here is the verified data brief for ${brief.label} (${brief.range.start} to ${brief.range.end}). Today is ${brief.generatedFor}. Base your entire review on this and nothing else.
+  return `Here is the verified data brief for the COMPLETED ${brief.period} period ${brief.label} (${brief.range.start} to ${brief.range.end}). This period is over; review it as a finished, closed period. Do NOT mention "today", "the first day of the week", or that the period just started — it is in the past. Base your entire review on this data and nothing else.
 
 \`\`\`json
 ${JSON.stringify(brief, null, 2)}

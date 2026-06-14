@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Streamdown } from 'streamdown';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,8 +33,22 @@ export default function InsightPanel({ period }: { period: Period }) {
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+  const [label, setLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const noun = PERIOD_NOUN[period];
+
+  // Preload the latest stored insight for the last completed period.
+  const cached = trpc.insights.get.useQuery({ period });
+  useEffect(() => {
+    if (!cached.data) return;
+    if (cached.data.label) setLabel(prev => prev ?? cached.data!.label);
+    if (cached.data.content) {
+      setContent(prev => (prev === null ? cached.data!.content : prev));
+      setGeneratedAt(prev =>
+        prev ?? (cached.data!.generatedAt ? new Date(cached.data!.generatedAt) : null)
+      );
+    }
+  }, [cached.data]);
 
   const generate = trpc.insights.generate.useMutation();
 
@@ -43,6 +57,7 @@ export default function InsightPanel({ period }: { period: Period }) {
     try {
       const res = await generate.mutateAsync({ period, refresh });
       setContent(res.content || '');
+      setLabel(res.label ?? null);
       setGeneratedAt(res.generatedAt ? new Date(res.generatedAt) : new Date());
       if (refresh) toast.success('Insight regenerated ✨');
     } catch {
@@ -69,8 +84,13 @@ export default function InsightPanel({ period }: { period: Period }) {
       >
         <span className="flex items-center gap-2 min-w-0">
           <span className="text-lg shrink-0">✨</span>
-          <span className="text-sm font-bold text-[var(--sky)] truncate">
-            {content ? `Your ${noun}'s insights` : `Show this ${noun}'s insights`}
+          <span className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-[var(--sky)] truncate">
+              {content ? `Last ${noun}'s insights` : `Show last ${noun}'s insights`}
+            </span>
+            {label && (
+              <span className="text-[10px] text-[var(--muted-foreground)] truncate">{label}</span>
+            )}
           </span>
         </span>
         <span

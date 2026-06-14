@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getPeriodKey, getPeriodRange, getPeriodLabel } from "./insights";
+import {
+  getPeriodKey,
+  getPeriodRange,
+  getPeriodLabel,
+  getLastCompletedPeriodKey,
+} from "./insights";
 
 // Use a fixed reference date: 2026-06-13 is a Saturday in ISO week 24 of 2026.
 const REF = new Date(Date.UTC(2026, 5, 13, 9, 0, 0)); // already "SGT-shaped" UTC fields
@@ -83,7 +88,52 @@ describe("getPeriodLabel", () => {
     expect(getPeriodLabel("quarterly", "2026-Q2")).toBe("Q2 2026");
   });
 
-  it("labels weekly with the date range", () => {
-    expect(getPeriodLabel("weekly", "2026-W24")).toBe("2026-06-08 → 2026-06-14");
+  it("labels weekly with a human-readable date range (same month)", () => {
+    expect(getPeriodLabel("weekly", "2026-W24")).toBe("8–14 Jun 2026");
+  });
+
+  it("labels weekly spanning two months", () => {
+    // ISO week 27 of 2026: Mon 2026-06-29 .. Sun 2026-07-05
+    expect(getPeriodLabel("weekly", "2026-W27")).toBe("29 Jun – 5 Jul 2026");
+  });
+});
+
+describe("getLastCompletedPeriodKey", () => {
+  it("weekly: on Monday returns the previous Mon–Sun week", () => {
+    // Mon 2026-06-15 (ISO week 25) → last completed week is week 24 (8–14 Jun)
+    const monday = new Date(Date.UTC(2026, 5, 15, 9, 0, 0));
+    expect(getLastCompletedPeriodKey("weekly", monday)).toBe("2026-W24");
+  });
+
+  it("weekly: mid-week still returns the previous completed week", () => {
+    // Thu 2026-06-18 (ISO week 25) → last completed week is week 24
+    const thursday = new Date(Date.UTC(2026, 5, 18, 9, 0, 0));
+    expect(getLastCompletedPeriodKey("weekly", thursday)).toBe("2026-W24");
+  });
+
+  it("weekly: on Sunday returns the week that just ended that day", () => {
+    // Sun 2026-06-14 is the LAST day of week 24, so the last *completed* week is week 23.
+    const sunday = new Date(Date.UTC(2026, 5, 14, 9, 0, 0));
+    expect(getLastCompletedPeriodKey("weekly", sunday)).toBe("2026-W23");
+  });
+
+  it("monthly: returns the previous calendar month", () => {
+    const jun = new Date(Date.UTC(2026, 5, 15));
+    expect(getLastCompletedPeriodKey("monthly", jun)).toBe("2026-05");
+  });
+
+  it("monthly: January rolls back to previous December", () => {
+    const jan = new Date(Date.UTC(2026, 0, 10));
+    expect(getLastCompletedPeriodKey("monthly", jan)).toBe("2025-12");
+  });
+
+  it("quarterly: returns the previous quarter", () => {
+    const q2 = new Date(Date.UTC(2026, 5, 15)); // in Q2
+    expect(getLastCompletedPeriodKey("quarterly", q2)).toBe("2026-Q1");
+  });
+
+  it("quarterly: Q1 rolls back to previous year's Q4", () => {
+    const q1 = new Date(Date.UTC(2026, 1, 15)); // Feb, in Q1
+    expect(getLastCompletedPeriodKey("quarterly", q1)).toBe("2025-Q4");
   });
 });

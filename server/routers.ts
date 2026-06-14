@@ -46,7 +46,8 @@ import {
 import {
   getOrGenerateInsight,
   generateInsight,
-  getPeriodKey,
+  getLastCompletedPeriodKey,
+  getPeriodLabel,
   type Period,
 } from "./insights";
 
@@ -469,11 +470,12 @@ export const appRouter = router({
       )
       .query(async ({ ctx, input }) => {
         const period = input.period as Period;
-        const periodKey = input.periodKey || getPeriodKey(period);
+        const periodKey = input.periodKey || getLastCompletedPeriodKey(period);
         const { getReflectionInsight } = await import("./db");
         const row = await getReflectionInsight(ctx.workspaceOwnerId!, period, periodKey);
         return {
           periodKey,
+          label: getPeriodLabel(period, periodKey),
           content: row?.content ?? null,
           generatedAt: row?.generatedAt ?? null,
         };
@@ -489,13 +491,14 @@ export const appRouter = router({
       )
       .mutation(async ({ ctx, input }) => {
         const period = input.period as Period;
-        const periodKey = input.periodKey || getPeriodKey(period);
+        const periodKey = input.periodKey || getLastCompletedPeriodKey(period);
+        const label = getPeriodLabel(period, periodKey);
         if (input.refresh) {
           const { content } = await generateInsight(ctx.workspaceOwnerId!, period, periodKey);
-          return { periodKey, content, cached: false, generatedAt: new Date() };
+          return { periodKey, label, content, cached: false, generatedAt: new Date() };
         }
         const result = await getOrGenerateInsight(ctx.workspaceOwnerId!, period, periodKey);
-        return { periodKey, ...result };
+        return { periodKey, label, ...result };
       }),
   }),
 

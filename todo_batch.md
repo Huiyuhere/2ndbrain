@@ -35,3 +35,16 @@
 ## Wrap
 - [x] Tests: 70/70 pass (13 new insights tests); tsc 0 errors
 - [x] Checkpoint saved + user deployed; crons registered against production URL
+
+
+## Insights: default to last COMPLETED period (Mon–Sun) + persist with reflection
+- [x] insights.ts: week math already Mon–Sun (ISO week, Monday start)
+- [x] insights.ts: added getLastCompletedPeriodKey for week/month/quarter
+- [x] InsightPanel/Reflections: default to last completed period (routers default to getLastCompletedPeriodKey)
+- [x] Show latest stored insight by default (preload cached via insights.get on mount)
+- [x] Persist AI recap tied to completed periodKey; regenerate overwrites
+- [x] scheduledInsights.ts: weekly Sunday reviews just-ended week; monthly/quarterly last-day guard reviews ending period (already correct)
+- [x] Reflections context banner now shows the last-completed period label (server-aligned)
+- [x] Prettified weekly label (8–14 Jun 2026); reframed prompt for a completed period
+- [x] Update insights.test.ts for Mon–Sun + last-completed-period helpers (21 tests)
+- [x] tsc clean + 78/78 tests pass + checkpoint

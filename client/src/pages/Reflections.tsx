@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '@/components/BackButton';
 import InsightPanel from '@/components/InsightPanel';
+import { trpc } from '@/lib/trpc';
 
 type Tab = 'weekly' | 'monthly' | 'quarterly';
 
@@ -67,6 +68,18 @@ export default function Reflections() {
 
   const prompts = PROMPTS_MAP[tab];
 
+  // Server-aligned label for the LAST COMPLETED period (Mon–Sun week, prev month, prev quarter).
+  // Drives the context-card banner so the banner, reflection, and AI recap all refer to the
+  // same period the user is reviewing.
+  const periodInfo = trpc.insights.get.useQuery({ period: tab });
+  const periodLabel = periodInfo.data?.label ?? null;
+  const contextHeading =
+    tab === 'weekly'
+      ? `📅 Week of ${periodLabel ?? '…'}`
+      : tab === 'monthly'
+        ? `🗓️ ${periodLabel ?? '…'}`
+        : `📊 ${periodLabel ?? '…'}`;
+
   // Past reflections for this tab, newest first
   const pastReflections = state.reflections
     .filter(r => r.type === tab)
@@ -122,7 +135,7 @@ export default function Reflections() {
       <div className="mx-4 mb-4 p-4 rounded-2xl border border-[var(--border)] bg-white">
         <div className="flex items-start justify-between gap-2">
           <p className="text-xs text-[var(--muted-foreground)] font-semibold uppercase tracking-wider mb-1">
-            {tab === 'weekly' ? `📅 Week of ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}` : tab === 'monthly' ? `🗓️ ${new Date().toLocaleDateString('en-SG', { month: 'long', year: 'numeric' })}` : '📊 Q2 2026 · Apr–Jun'}
+            {contextHeading}
           </p>
           {(tab === 'monthly' || tab === 'quarterly') && (
             <button
