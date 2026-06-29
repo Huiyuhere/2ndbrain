@@ -1,4 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
+import { Link } from 'wouter';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import BackButton from '@/components/BackButton';
 import { getWeekDates, getTaskMinutes, getTodayString, getEstimationStats, getSleepHabitInsight, formatMinutes, getHoursByType, getHoursByCategory } from '@/lib/store';
@@ -118,6 +119,22 @@ export default function Analytics() {
           })()}</div>
         </div>
       </div>
+
+      {/* ASK MANUS — grounded analytics chat */}
+      <Link
+        href="/analytics/ask"
+        className="mx-4 mt-4 flex items-center gap-3 p-4 rounded-2xl border border-[var(--sky)]/30 bg-gradient-to-br from-[var(--sky-mist)] to-white active:scale-[0.99] transition-transform"
+        style={{ transitionTimingFunction: 'cubic-bezier(0.23,1,0.32,1)' }}
+      >
+        <span className="text-2xl shrink-0">✨</span>
+        <span className="flex flex-col min-w-0 flex-1">
+          <span className="text-sm font-bold text-[var(--sky)]">Ask Manus</span>
+          <span className="text-xs text-[var(--muted-foreground)] truncate">
+            Dig deeper — ask anything about your data &amp; patterns
+          </span>
+        </span>
+        <span className="text-[var(--sky)] text-lg shrink-0">→</span>
+      </Link>
 
       {/* WEEKLY SCORE HERO */}
       <div className="mx-4 mt-4 p-5 rounded-2xl text-white" style={{ background: 'linear-gradient(135deg, #2E86C1, #5DADE2)' }}>

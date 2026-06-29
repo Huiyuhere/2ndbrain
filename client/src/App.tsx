@@ -15,6 +15,7 @@ import Habits from "./pages/Habits";
 import Reflections from "./pages/Reflections";
 import Roadmap from "./pages/Roadmap";
 import Analytics from "./pages/Analytics";
+import AskManus from "./pages/AskManus";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import More from "./pages/More";
@@ -51,6 +52,7 @@ function AppLayout() {
           <Route path="/reflections" component={Reflections} />
           <Route path="/roadmap"     component={Roadmap} />
           <Route path="/analytics"   component={Analytics} />
+          <Route path="/analytics/ask" component={AskManus} />
           <Route path="/goals"       component={Goals} />
           <Route path="/settings"    component={Settings} />
           <Route path="/more"        component={More} />

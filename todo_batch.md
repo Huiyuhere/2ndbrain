@@ -48,3 +48,14 @@
 - [x] Prettified weekly label (8–14 Jun 2026); reframed prompt for a completed period
 - [x] Update insights.test.ts for Mon–Sun + last-completed-period helpers (21 tests)
 - [x] tsc clean + 78/78 tests pass + checkpoint
+
+
+## Ask Manus — grounded analytics chat (under Analytics)
+- [x] server/askManus.ts: buildAnalyticsSnapshot(userId) — all-time totals + weekday breakdowns + by-type + estimation + sleep-vs-completion + habits + goals + recent mood/sleep + journal frequency (default 90d window, all-time aggregates)
+- [x] server/askManus.ts: strict no-hallucination system prompt; answerQuestion(userId, messages) using invokeLLM with the snapshot
+- [x] routers.ts: askManus.ask protected mutation (input: messages[]); returns assistant answer
+- [x] Chat UI: client/src/pages/AskManus.tsx (ephemeral history, starter prompts, markdown via Streamdown)
+- [x] Analytics page: added "✨ Ask Manus" button (top of page) that navigates to /analytics/ask (or opens chat)
+- [x] Registered route /analytics/ask in App.tsx with BackButton to Analytics
+- [x] server/askManus.test.ts: snapshot aggregation unit tests (9, refactored computeSnapshot pure fn)
+- [x] tsc clean + 87/87 tests pass + browser verified (grounded, hedged sleep answer) + checkpoint

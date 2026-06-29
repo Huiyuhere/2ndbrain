@@ -50,6 +50,7 @@ import {
   getPeriodLabel,
   type Period,
 } from "./insights";
+import { answerQuestion } from "./askManus";
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
@@ -499,6 +500,30 @@ export const appRouter = router({
         }
         const result = await getOrGenerateInsight(ctx.workspaceOwnerId!, period, periodKey);
         return { periodKey, label, ...result };
+      }),
+  }),
+
+  // ─── Ask Manus (grounded analytics chat) ──────────────────────────────────
+  askManus: router({
+    // Answer a free-form question grounded ONLY in the user's data snapshot.
+    // `history` is the full conversation so far (ephemeral; the client holds it).
+    ask: workspaceProcedure
+      .input(
+        z.object({
+          history: z
+            .array(
+              z.object({
+                role: z.enum(["user", "assistant"]),
+                content: z.string().min(1).max(4000),
+              })
+            )
+            .min(1)
+            .max(40),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const answer = await answerQuestion(ctx.workspaceOwnerId!, input.history);
+        return { answer };
       }),
   }),
 
