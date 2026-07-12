@@ -110,9 +110,9 @@ describe("computeSnapshot — habits, goals, journal window", () => {
       completions: [{ habitId: "h1" }, { habitId: "h1" }, { habitId: "h2" }],
     };
     input.evenings = [
-      { date: "2026-06-14" }, // in window
-      { date: "2026-06-14" }, // duplicate day → distinct count = still counts entries
-      { date: "2020-01-01" }, // out of 90d window
+      { date: "2026-06-14", title: "Good day", highlights: [{ type: "+", text: "shipped feature" }], freeWrite: "Felt productive" },
+      { date: "2026-06-14", title: null, highlights: null, freeWrite: null }, // duplicate day → distinct count = still counts entries
+      { date: "2020-01-01", title: "Old", highlights: null, freeWrite: null }, // out of 90d window
     ];
     const s = computeSnapshot(input, TODAY);
     const read = s.habitsAllTime.find(h => h.name === "Read")!;
@@ -129,6 +129,41 @@ describe("computeSnapshot — habits, goals, journal window", () => {
     expect(s.goals.quarterlyGoal).toBe("Ship");
     expect(s.goals.quarterlyProgress).toBe(40);
     expect(s.goals.items[0]).toEqual({ title: "Launch", progress: 20, done: false });
+  });
+});
+
+describe("computeSnapshot — journal text and reflections", () => {
+  it("includes recent journal entry text content in snapshot", () => {
+    const input = baseInput();
+    input.evenings = [
+      { date: "2026-06-10", title: "Productive day", highlights: [{ type: "+", text: "shipped" }], freeWrite: "Felt great" },
+      { date: "2026-06-11", title: null, highlights: null, freeWrite: "Short note" },
+      { date: "2020-01-01", title: "Old", highlights: null, freeWrite: "Out of window" },
+    ];
+    const s = computeSnapshot(input, TODAY);
+    expect(s.recentJournalEntries).toHaveLength(2); // only in-window
+    expect(s.recentJournalEntries[0].title).toBe("Productive day");
+    expect(s.recentJournalEntries[0].freeWrite).toBe("Felt great");
+    expect(s.recentJournalEntries[0].highlights![0].text).toBe("shipped");
+  });
+
+  it("truncates long freeWrite to 500 chars", () => {
+    const input = baseInput();
+    const longText = "x".repeat(600);
+    input.evenings = [{ date: "2026-06-10", title: null, highlights: null, freeWrite: longText }];
+    const s = computeSnapshot(input, TODAY);
+    expect(s.recentJournalEntries[0].freeWrite!.length).toBeLessThanOrEqual(501); // 500 + ellipsis char
+  });
+
+  it("includes recent reflection answers in snapshot", () => {
+    const input = baseInput();
+    input.reflections = [
+      { id: "r1", type: "weekly", date: "2026-06-14", answers: { wins: "shipped", struggles: "focus" } },
+    ];
+    const s = computeSnapshot(input, TODAY);
+    expect(s.recentReflections).toHaveLength(1);
+    expect(s.recentReflections[0].type).toBe("weekly");
+    expect(s.recentReflections[0].answers!.wins).toBe("shipped");
   });
 });
 

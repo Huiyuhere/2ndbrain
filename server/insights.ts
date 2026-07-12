@@ -84,8 +84,14 @@ export function getPeriodKey(period: Period, ref: Date = sgtNow()): string {
  */
 export function getLastCompletedPeriodKey(period: Period, ref: Date = sgtNow()): string {
   if (period === "weekly") {
-    // Monday of the week containing ref, then step back 7 days into last week.
+    // Weeks are Mon–Sun. On Sunday the current week is complete, so return it.
+    // On Mon–Sat the current week is in-progress, so step back to the previous one.
     const dayNr = (ref.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+    if (dayNr === 6) {
+      // Sunday → current week (Mon–Sun) just ended today
+      return getPeriodKey("weekly", ref);
+    }
+    // Mon–Sat → step back to previous completed week
     const monday = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate()));
     monday.setUTCDate(monday.getUTCDate() - dayNr);
     const lastWeekDay = new Date(monday);
@@ -93,12 +99,23 @@ export function getLastCompletedPeriodKey(period: Period, ref: Date = sgtNow()):
     return getPeriodKey("weekly", lastWeekDay);
   }
   if (period === "monthly") {
-    // First day of current month minus one day → some day in the previous month.
+    // On the last day of the month, the current month is complete.
+    const nextDay = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate() + 1));
+    if (nextDay.getUTCMonth() !== ref.getUTCMonth()) {
+      // Last day of month → current month is the completed one
+      return getPeriodKey("monthly", ref);
+    }
+    // Otherwise step back to previous month.
     const prev = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 0));
     return getPeriodKey("monthly", prev);
   }
-  // quarterly: first month of current quarter, step back one day into prev quarter.
+  // quarterly: on the last day of the quarter, current quarter is complete.
   const qStartMonth = Math.floor(ref.getUTCMonth() / 3) * 3;
+  const qEndMonth = qStartMonth + 2;
+  const lastDayOfQuarter = new Date(Date.UTC(ref.getUTCFullYear(), qEndMonth + 1, 0));
+  if (ref.getUTCDate() === lastDayOfQuarter.getUTCDate() && ref.getUTCMonth() === qEndMonth) {
+    return getPeriodKey("quarterly", ref);
+  }
   const prevQ = new Date(Date.UTC(ref.getUTCFullYear(), qStartMonth, 0));
   return getPeriodKey("quarterly", prevQ);
 }

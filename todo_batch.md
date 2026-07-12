@@ -59,3 +59,11 @@
 - [x] Registered route /analytics/ask in App.tsx with BackButton to Analytics
 - [x] server/askManus.test.ts: snapshot aggregation unit tests (9, refactored computeSnapshot pure fn)
 - [x] tsc clean + 87/87 tests pass + browser verified (grounded, hedged sleep answer) + checkpoint
+
+## Bug fixes — Ask Manus journal + weekly recap period
+- [x] askManus.ts: include recent journal entry TEXT content (last 30 entries) in the snapshot so AI can reference what user wrote
+- [x] askManus.ts: include recent reflection answers (last 10) in the snapshot
+- [x] Fix weekly recap period: on Sunday, current week IS the completed week (7–13 Jul = W28)
+- [x] Fix monthly: on last day of month, current month is the completed one
+- [x] Fix quarterly: on last day of quarter, current quarter is the completed one
+- [x] Updated insights.test.ts + askManus.test.ts (93/93 pass)

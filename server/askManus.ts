@@ -113,6 +113,17 @@ export type AnalyticsSnapshot = {
   };
   recentMoodSleep: { date: string; mood: number; sleep: number }[];
   recentCompletedTaskTitles: string[];
+  recentJournalEntries: {
+    date: string;
+    title?: string | null;
+    highlights?: { type: "+" | "-"; text: string }[] | null;
+    freeWrite?: string | null;
+  }[];
+  recentReflections: {
+    type: string;
+    date: string;
+    answers?: Record<string, string> | null;
+  }[];
 };
 
 /** Minimal shapes the pure aggregator needs (subset of the DB rows). */
@@ -128,9 +139,9 @@ export type SnapshotInput = {
     title: string;
   }[];
   moods: { date: string; mood: number; sleep: number }[];
-  evenings: { date: string }[];
+  evenings: { date: string; title?: string | null; highlights?: { type: "+" | "-"; text: string }[] | null; freeWrite?: string | null }[];
   habitData: { habits: { id: string; name: string }[]; completions: { habitId: string }[] };
-  reflections: { id?: unknown }[];
+  reflections: { id?: unknown; type?: string; date?: string; answers?: Record<string, string> | null }[];
   goals: { title: string; progress?: number | null; done?: boolean | null }[];
   profile: {
     quarterlyGoalText?: string | null;
@@ -283,6 +294,23 @@ export function computeSnapshot(
       .filter(t => t.completedAt && t.completedAt >= windowStart)
       .slice(-40)
       .map(t => t.title),
+    recentJournalEntries: evenings
+      .filter(e => e.date >= windowStart && e.date <= today)
+      .slice(-30)
+      .map(e => ({
+        date: e.date,
+        title: e.title ?? null,
+        highlights: e.highlights ?? null,
+        freeWrite: e.freeWrite ? (e.freeWrite.length > 500 ? e.freeWrite.slice(0, 500) + "…" : e.freeWrite) : null,
+      })),
+    recentReflections: reflections
+      .filter((r): r is typeof r & { type: string; date: string } => Boolean(r.type && r.date))
+      .slice(-10)
+      .map(r => ({
+        type: r.type!,
+        date: r.date!,
+        answers: r.answers ?? null,
+      })),
   };
 }
 

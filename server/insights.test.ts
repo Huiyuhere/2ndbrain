@@ -111,15 +111,25 @@ describe("getLastCompletedPeriodKey", () => {
     expect(getLastCompletedPeriodKey("weekly", thursday)).toBe("2026-W24");
   });
 
-  it("weekly: on Sunday returns the week that just ended that day", () => {
-    // Sun 2026-06-14 is the LAST day of week 24, so the last *completed* week is week 23.
+  it("weekly: on Sunday returns the CURRENT week (it just ended today)", () => {
+    // Sun 2026-06-14 is the LAST day of week 24 → week 24 is now complete
     const sunday = new Date(Date.UTC(2026, 5, 14, 9, 0, 0));
-    expect(getLastCompletedPeriodKey("weekly", sunday)).toBe("2026-W23");
+    expect(getLastCompletedPeriodKey("weekly", sunday)).toBe("2026-W24");
   });
 
-  it("monthly: returns the previous calendar month", () => {
+  it("weekly: on Sunday 13 Jul returns the current week (7–13 Jul = W28)", () => {
+    const sunday = new Date(Date.UTC(2026, 6, 13, 9, 0, 0));
+    expect(getLastCompletedPeriodKey("weekly", sunday)).toBe("2026-W28");
+  });
+
+  it("monthly: mid-month returns the previous calendar month", () => {
     const jun = new Date(Date.UTC(2026, 5, 15));
     expect(getLastCompletedPeriodKey("monthly", jun)).toBe("2026-05");
+  });
+
+  it("monthly: on last day of month returns the current month", () => {
+    const jun30 = new Date(Date.UTC(2026, 5, 30));
+    expect(getLastCompletedPeriodKey("monthly", jun30)).toBe("2026-06");
   });
 
   it("monthly: January rolls back to previous December", () => {
@@ -127,9 +137,14 @@ describe("getLastCompletedPeriodKey", () => {
     expect(getLastCompletedPeriodKey("monthly", jan)).toBe("2025-12");
   });
 
-  it("quarterly: returns the previous quarter", () => {
+  it("quarterly: mid-quarter returns the previous quarter", () => {
     const q2 = new Date(Date.UTC(2026, 5, 15)); // in Q2
     expect(getLastCompletedPeriodKey("quarterly", q2)).toBe("2026-Q1");
+  });
+
+  it("quarterly: on last day of quarter returns the current quarter", () => {
+    const jun30 = new Date(Date.UTC(2026, 5, 30)); // last day of Q2
+    expect(getLastCompletedPeriodKey("quarterly", jun30)).toBe("2026-Q2");
   });
 
   it("quarterly: Q1 rolls back to previous year's Q4", () => {
