@@ -9,10 +9,10 @@ type ChatMsg = { role: 'user' | 'assistant'; content: string };
 
 const STARTERS = [
   "When am I most productive, and what's dragging my completion rate down?",
-  "Which task types do I keep avoiding or leaving unfinished?",
-  "Is there any link between my sleep and how much I get done?",
   "What patterns show up before my best and worst days?",
-  "Am I overcommitting — creating more than I can finish?",
+  "Based on my journal, what should I focus on this week?",
+  "I'm feeling stuck — what does my data say about when I break out of slumps?",
+  "Give me honest advice based on everything you know about me.",
 ];
 
 export default function AskManus() {
@@ -64,7 +64,7 @@ export default function AskManus() {
         <div>
           <BackButton fallback="/analytics" label="Analytics" />
           <div className="topbar-title mt-0.5">✨ Ask Manus</div>
-          <div className="topbar-sub">Ask anything about your own data &amp; patterns</div>
+          <div className="topbar-sub">Your personal AI advisor — knows your full context</div>
         </div>
       </div>
 
@@ -73,11 +73,11 @@ export default function AskManus() {
         {empty ? (
           <div className="max-w-2xl mx-auto pt-2">
             <div className="p-4 rounded-2xl border border-[var(--sky)]/30 bg-gradient-to-br from-[var(--sky-mist)] to-white">
-              <p className="text-sm font-bold text-[var(--sky)] mb-1">Your private analytics co-pilot</p>
+              <p className="text-sm font-bold text-[var(--sky)] mb-1">Your personal AI advisor</p>
               <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
-                I look at your real logged data — tasks, time, mood, sleep, habits, journaling and goals — and answer
-                grounded questions about your patterns. I only use your data and I won't make numbers up; if something
-                isn't tracked, I'll say so.
+                I know your full context — tasks, journal entries, mood, sleep, habits, goals, projects, and reflections.
+                Ask me anything: productivity patterns, life decisions, advice, planning, or just to think something through.
+                My advice is grounded in what you've actually logged.
               </p>
             </div>
 
@@ -147,7 +147,7 @@ export default function AskManus() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Ask about your patterns…"
+            placeholder="Ask me anything…"
             className="flex-1 resize-none max-h-32 px-4 py-3 rounded-2xl border border-[var(--border)] bg-white text-sm focus:outline-none focus:border-[var(--sky)]/50 focus:ring-2 focus:ring-[var(--sky)]/20 transition-all"
           />
           <button
@@ -161,7 +161,7 @@ export default function AskManus() {
           </button>
         </div>
         <p className="max-w-2xl mx-auto text-[10px] text-[var(--muted-foreground)] mt-2 px-1">
-          Answers are based only on your logged data. This chat isn't saved — it clears when you leave.
+          Advice is grounded in your logged data. This chat isn't saved — it clears when you leave.
         </p>
       </div>
     </div>
