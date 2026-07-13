@@ -19,7 +19,11 @@ export default function AskManus() {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const ask = trpc.askManus.ask.useMutation();
+  const askResetRef = useRef<() => void>(() => {});
+  const ask = trpc.askManus.ask.useMutation({
+    onSettled: () => askResetRef.current(),
+  });
+  askResetRef.current = ask.reset;
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
