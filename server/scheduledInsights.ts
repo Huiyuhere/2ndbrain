@@ -3,10 +3,10 @@
  *
  * Mounted at POST /api/scheduled/insights (see server/_core/index.ts).
  *
- * Three project-level crons fire this endpoint (all at SGT 17:00 = 09:00 UTC):
- *   - weekly:    every Sunday              → "0 0 9 * * 0"
- *   - monthly:   every day, guarded to the last day of the month
- *   - quarterly: every day, guarded to the last day of a quarter (Mar/Jun/Sep/Dec)
+ * Three project-level crons fire this endpoint:
+ *   - weekly:    every Monday 01:00 UTC (09:00 SGT) → reviews previous Mon–Sun
+ *   - monthly:   every day 09:00 UTC, guarded to the last day of the month
+ *   - quarterly: every day 09:00 UTC, guarded to the last day of a quarter
  *
  * The payload tells us which period to generate: { "period": "weekly" | "monthly" | "quarterly" }.
  * For monthly/quarterly we run daily and self-guard so we only act on the true
@@ -17,7 +17,7 @@ import type { Request, Response } from "express";
 import { sdk } from "./_core/sdk";
 import { getWorkspaceOwnerId } from "./_core/context";
 import { notifyOwner } from "./_core/notification";
-import { generateInsight, getPeriodKey, getPeriodLabel, type Period } from "./insights";
+import { generateInsight, getPeriodKey, getLastCompletedPeriodKey, getPeriodLabel, type Period } from "./insights";
 
 const SGT_OFFSET_MS = 8 * 60 * 60 * 1000;
 
@@ -41,11 +41,14 @@ function isLastDayOfQuarter(d: Date): boolean {
 
 /**
  * The period KEY we should generate for at trigger time.
- * Weekly runs on Sunday and reviews the week that just finished (today's week,
- * since the ISO week containing this Sunday ends today). Monthly/quarterly run
- * on the last day and review the current (just-finished) month/quarter.
+ * Weekly fires on Monday morning and reviews the previous Mon–Sun week.
+ * Monthly/quarterly fire on the last day and review the current (just-finished) period.
  */
 function periodKeyForTrigger(period: Period, now: Date): string {
+  if (period === "weekly") {
+    // Monday morning → getLastCompletedPeriodKey returns previous Mon–Sun
+    return getLastCompletedPeriodKey(period, now);
+  }
   return getPeriodKey(period, now);
 }
 

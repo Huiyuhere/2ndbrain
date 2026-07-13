@@ -17,6 +17,7 @@ import {
   getHabits,
   getReflections,
   getGoals,
+  getProjects,
   getOrCreateProfile,
 } from "./db";
 
@@ -124,10 +125,15 @@ export type AnalyticsSnapshot = {
     date: string;
     answers?: Record<string, string> | null;
   }[];
+  projects: {
+    active: { title: string; description: string | null; startDate: string | null; endDate: string | null }[];
+    completed: { title: string; description: string | null; endDate: string | null }[];
+  };
 };
 
 /** Minimal shapes the pure aggregator needs (subset of the DB rows). */
 export type SnapshotInput = {
+  projects?: { title: string; description?: string | null; startDate?: string | null; endDate?: string | null; status: string }[];
   tasks: {
     column: string;
     completedAt?: string | null;
@@ -311,6 +317,19 @@ export function computeSnapshot(
         date: r.date!,
         answers: r.answers ?? null,
       })),
+    projects: {
+      active: (data.projects ?? []).filter(p => p.status === "active").map(p => ({
+        title: p.title,
+        description: p.description ?? null,
+        startDate: p.startDate ?? null,
+        endDate: p.endDate ?? null,
+      })),
+      completed: (data.projects ?? []).filter(p => p.status === "completed").map(p => ({
+        title: p.title,
+        description: p.description ?? null,
+        endDate: p.endDate ?? null,
+      })),
+    },
   };
 }
 
@@ -325,7 +344,7 @@ export async function buildAnalyticsSnapshot(
   windowDays = 90
 ): Promise<AnalyticsSnapshot> {
   const today = dateStr(sgtNow());
-  const [tasks, moods, evenings, habitData, reflections, goals, profile] = await Promise.all([
+  const [tasks, moods, evenings, habitData, reflections, goals, profile, userProjects] = await Promise.all([
     getTasks(userId),
     getMoodEntries(userId),
     getEveningEntries(userId),
@@ -333,6 +352,7 @@ export async function buildAnalyticsSnapshot(
     getReflections(userId),
     getGoals(userId),
     getOrCreateProfile(userId),
+    getProjects(userId),
   ]);
   return computeSnapshot(
     {
@@ -343,6 +363,7 @@ export async function buildAnalyticsSnapshot(
       reflections: reflections as unknown as SnapshotInput["reflections"],
       goals: goals as unknown as SnapshotInput["goals"],
       profile: profile as unknown as SnapshotInput["profile"],
+      projects: userProjects as unknown as SnapshotInput["projects"],
     },
     today,
     windowDays

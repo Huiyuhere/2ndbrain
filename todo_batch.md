@@ -67,3 +67,7 @@
 - [x] Fix monthly: on last day of month, current month is the completed one
 - [x] Fix quarterly: on last day of quarter, current quarter is the completed one
 - [x] Updated insights.test.ts + askManus.test.ts (93/93 pass)
+- [x] insights.ts + askManus.ts: include projects data (active/completed) in both data briefs
+- [x] Weekly cron moved to Monday 01:00 UTC (09:00 SGT) so all Sunday data is captured before generation
+- [x] scheduledInsights.ts: weekly now uses getLastCompletedPeriodKey (fires Monday, reviews previous Mon–Sun)
+- [x] tsc clean + 93/93 tests pass

@@ -16,6 +16,7 @@ import {
   getHabits,
   getReflections,
   getGoals,
+  getProjects,
   getOrCreateProfile,
   getReflectionInsight,
   upsertReflectionInsight,
@@ -265,6 +266,10 @@ export type DataBrief = {
     items: { title: string; progress: number; done: boolean; dueDate: string | null }[];
   };
   reflections: { type: string; date: string; answers: Record<string, string> }[];
+  projects: {
+    active: { title: string; description: string | null; startDate: string | null; endDate: string | null }[];
+    completedThisPeriod: { title: string; description: string | null; endDate: string | null }[];
+  };
 };
 
 export async function buildDataBrief(
@@ -275,7 +280,7 @@ export async function buildDataBrief(
   const range = getPeriodRange(period, periodKey);
   const today = dateStr(sgtNow());
 
-  const [tasks, moods, evenings, habitData, reflections, goals, profile] = await Promise.all([
+  const [tasks, moods, evenings, habitData, reflections, goals, profile, userProjects] = await Promise.all([
     getTasks(userId),
     getMoodEntries(userId),
     getEveningEntries(userId),
@@ -283,6 +288,7 @@ export async function buildDataBrief(
     getReflections(userId),
     getGoals(userId),
     getOrCreateProfile(userId),
+    getProjects(userId),
   ]);
 
   // ── Tasks ──
@@ -413,6 +419,14 @@ export async function buildDataBrief(
       items: goalItems,
     },
     reflections: periodReflections,
+    projects: {
+      active: userProjects
+        .filter(p => p.status === "active")
+        .map(p => ({ title: p.title, description: p.description ?? null, startDate: p.startDate ?? null, endDate: p.endDate ?? null })),
+      completedThisPeriod: userProjects
+        .filter(p => p.status === "completed" && p.endDate && p.endDate >= range.start && p.endDate <= range.end)
+        .map(p => ({ title: p.title, description: p.description ?? null, endDate: p.endDate ?? null })),
+    },
   };
 }
 
