@@ -23,6 +23,7 @@ import Profile from "./pages/Profile";
 import JournalViewer from "./pages/JournalViewer";
 import Projects from "./pages/Projects";
 import NotFound from "./pages/NotFound";
+import GoogleOAuthCallback from "./pages/GoogleOAuthCallback";
 
 function LoadingScreen() {
   return (
@@ -59,6 +60,7 @@ function AppLayout() {
           <Route path="/profile"      component={Profile} />
           <Route path="/journal"      component={JournalViewer} />
           <Route path="/projects"     component={Projects} />
+          <Route path="/google-oauth-callback" component={GoogleOAuthCallback} />
           <Route component={NotFound} />
         </Switch>
       </main>

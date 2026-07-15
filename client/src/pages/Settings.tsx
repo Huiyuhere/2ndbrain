@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import UserAvatar from '@/components/UserAvatar';
 import { trpc } from '@/lib/trpc';
@@ -14,6 +14,221 @@ const COLOUR_OPTIONS = [
 const EMOJI_OPTIONS = ['💼','💡','🌸','📚','🏃','🧠','🌐','🎯','💎','🔥','⚡','🎨'];
 
 const LEGACY_KEY = '2nd-brain-state';
+
+// ─── Google Calendar Integration Card ────────────────────────────────────────
+
+function GoogleCalendarCard() {
+  const utils = trpc.useUtils();
+  const { data: status, isLoading: statusLoading } = trpc.googleCalendar.status.useQuery();
+  const { data: googleCals } = trpc.googleCalendar.listCalendars.useQuery(undefined, {
+    enabled: status?.connected ?? false,
+  });
+  const { data: syncCals } = trpc.googleCalendar.getSyncCalendars.useQuery(undefined, {
+    enabled: status?.connected ?? false,
+  });
+
+  const disconnectMutation = trpc.googleCalendar.disconnect.useMutation({
+    onSuccess: () => {
+      toast.success('Google Calendar disconnected');
+      utils.googleCalendar.status.invalidate();
+      utils.googleCalendar.getSyncCalendars.invalidate();
+    },
+    onError: () => toast.error('Failed to disconnect'),
+  });
+
+  const updateSyncMutation = trpc.googleCalendar.updateSyncCalendars.useMutation({
+    onSuccess: () => {
+      toast.success('Calendar preferences saved');
+      utils.googleCalendar.getSyncCalendars.invalidate();
+    },
+    onError: () => toast.error('Failed to save preferences'),
+  });
+
+  const syncNowMutation = trpc.googleCalendar.sync.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Synced ${data.count} event${data.count === 1 ? '' : 's'}`);
+    },
+    onError: () => toast.error('Sync failed'),
+  });
+
+  // Build a map of calendarId → enabled from DB
+  const syncMap = new Map((syncCals ?? []).map(c => [c.calendarId, c.enabled]));
+
+  function toggleCalendar(calId: string, calName: string, currentEnabled: boolean, colorHex?: string | null) {
+    updateSyncMutation.mutate([{
+      calendarId: calId,
+      calendarName: calName,
+      enabled: !currentEnabled,
+      colorHex: colorHex ?? null,
+    }]);
+  }
+
+  // ── OAuth connect flow ──────────────────────────────────────────────────────
+  // We use a popup window to complete the Google OAuth flow.
+  // The popup posts a message back with the tokens.
+  function handleConnect() {
+    // Build the Google OAuth URL
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      toast.error('Google Calendar is not configured yet. Please add VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Settings → Secrets.');
+      return;
+    }
+    const redirectUri = encodeURIComponent(`${window.location.origin}/google-oauth-callback`);
+    const scope = encodeURIComponent('https://www.googleapis.com/auth/calendar openid email profile');
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+    const popup = window.open(url, 'google-oauth', 'width=500,height=600,scrollbars=yes');
+    if (!popup) {
+      toast.error('Popup blocked — please allow popups for this site');
+      return;
+    }
+    // Listen for the callback message from the popup
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'google-oauth-success') return;
+      window.removeEventListener('message', handler);
+      const { accessToken, refreshToken, expiresAt, scope: tokenScope, email } = event.data;
+      saveTokensMutation.mutate({ accessToken, refreshToken, expiresAt, scope: tokenScope, email });
+    };
+    window.addEventListener('message', handler);
+  }
+
+  const saveTokensMutation = trpc.googleCalendar.saveTokens.useMutation({
+    onSuccess: () => {
+      toast.success('Google Calendar connected!');
+      utils.googleCalendar.status.invalidate();
+      utils.googleCalendar.listCalendars.invalidate();
+      utils.googleCalendar.getSyncCalendars.invalidate();
+      // Trigger initial sync
+      syncNowMutation.mutate({});
+    },
+    onError: () => toast.error('Failed to save Google tokens'),
+  });
+
+  if (statusLoading) {
+    return (
+      <div className="p-4 rounded-2xl border border-[var(--border)] bg-white">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[var(--border)] animate-pulse" />
+          <div className="h-4 w-40 bg-[var(--border)] rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!status?.connected) {
+    return (
+      <div className="p-4 rounded-2xl border border-[var(--border)] bg-white">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ background: '#4285F420' }}>
+            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+              <path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" fill="#FFC107"/>
+              <path d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.4 6.3 14.7z" fill="#FF3D00"/>
+              <path d="M24 46c5.5 0 10.5-1.9 14.3-5.1l-6.6-5.6C29.7 36.9 27 38 24 38c-6 0-10.6-3.9-11.8-9.1l-7 5.4C8.1 41.6 15.5 46 24 46z" fill="#4CAF50"/>
+              <path d="M44.5 20H24v8.5h11.8c-1.1 3-3.5 5.5-6.8 7.1l6.6 5.6C40.2 37.5 45 31.3 45 24c0-1.3-.2-2.7-.5-4z" fill="#1976D2"/>
+            </svg>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-[var(--foreground)]">Google Calendar</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-0.5 leading-relaxed">
+              Connect to sync your 2nd Brain time blocks to Google Calendar and see your Google events here.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleConnect}
+          disabled={saveTokensMutation.isPending}
+          className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-white btn-sky disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {saveTokensMutation.isPending ? (
+            <><span className="animate-spin">⟳</span> Connecting...</>
+          ) : (
+            <>Connect Google Calendar</>
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // Connected state
+  return (
+    <div className="p-4 rounded-2xl border border-[var(--sky)]/40 bg-white space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ background: '#4285F420' }}>
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+            <path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" fill="#FFC107"/>
+            <path d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.4 6.3 14.7z" fill="#FF3D00"/>
+            <path d="M24 46c5.5 0 10.5-1.9 14.3-5.1l-6.6-5.6C29.7 36.9 27 38 24 38c-6 0-10.6-3.9-11.8-9.1l-7 5.4C8.1 41.6 15.5 46 24 46z" fill="#4CAF50"/>
+            <path d="M44.5 20H24v8.5h11.8c-1.1 3-3.5 5.5-6.8 7.1l6.6 5.6C40.2 37.5 45 31.3 45 24c0-1.3-.2-2.7-.5-4z" fill="#1976D2"/>
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-[var(--foreground)]">Google Calendar</p>
+          <p className="text-xs text-[#4285F4] font-medium">{status.email ?? 'Connected'}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => syncNowMutation.mutate({})}
+            disabled={syncNowMutation.isPending}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--sky)] transition-colors disabled:opacity-50"
+          >
+            {syncNowMutation.isPending ? '⟳' : '🔄'} Sync now
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('Disconnect Google Calendar? This will remove all mirrored events.')) {
+                disconnectMutation.mutate();
+              }
+            }}
+            disabled={disconnectMutation.isPending}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            Disconnect
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar selector */}
+      {googleCals && googleCals.length > 0 && (
+        <div>
+          <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Calendars to sync</p>
+          <div className="space-y-2">
+            {googleCals.map(cal => {
+              const isEnabled = syncMap.get(cal.id) ?? false;
+              return (
+                <div
+                  key={cal.id}
+                  className="flex items-center gap-3 p-2.5 rounded-xl border border-[var(--border)] bg-white"
+                >
+                  <div
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ background: cal.colorHex ?? '#4285F4' }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--foreground)] truncate">{cal.name}</p>
+                    {cal.primary && <p className="text-[10px] text-[var(--muted-foreground)]">Primary</p>}
+                  </div>
+                  <button
+                    onClick={() => toggleCalendar(cal.id, cal.name, isEnabled, cal.colorHex)}
+                    disabled={updateSyncMutation.isPending}
+                    className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${isEnabled ? 'bg-[var(--sky)]' : 'bg-[var(--border)]'}`}
+                  >
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${isEnabled ? 'left-[22px]' : 'left-0.5'}`} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-[var(--muted-foreground)] mt-2">
+            Enabled calendars are pulled every 15 minutes. 2nd Brain time blocks and scheduled tasks are pushed to your primary calendar automatically.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Settings page ───────────────────────────────────────────────────────
 
 export default function Settings() {
   const { state, updateCategories } = useApp();
@@ -126,6 +341,14 @@ export default function Settings() {
             <span className="streak-badge text-xs">🔥 {state.streak} day streak</span>
           </div>
         </div>
+      </div>
+
+      {/* INTEGRATIONS */}
+      <div className="section-hdr mt-5">
+        <div className="section-hdr-title">🔗 Integrations</div>
+      </div>
+      <div className="px-4">
+        <GoogleCalendarCard />
       </div>
 
       {/* CATEGORIES */}

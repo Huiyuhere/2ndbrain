@@ -8,6 +8,7 @@ import {
 import GoalBanner from '@/components/GoalBanner';
 import TimeBlockModal, { TimeBlockDraft } from '@/components/TimeBlockModal';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 const DAY_START = 6;  // 6am
 const DAY_END = 22;   // 10pm (exclusive end -> last row label is 9pm)
@@ -21,6 +22,12 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 function parseYMD(s: string) {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d));
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = parseYMD(dateStr);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 export default function CalendarPage() {
@@ -41,6 +48,32 @@ export default function CalendarPage() {
 
   // Time block modal
   const [blockDraft, setBlockDraft] = useState<TimeBlockDraft | null>(null);
+
+  // ── Google Calendar mirror events ──────────────────────────────────────────
+  const { data: gcStatus } = trpc.googleCalendar.status.useQuery();
+  const gcConnected = gcStatus?.connected ?? false;
+
+  // Fetch mirror events for the visible 13-day window
+  const windowStart = days[0];
+  const windowEnd = days[days.length - 1];
+  const { data: mirrorEvents, refetch: refetchMirror } = trpc.googleCalendar.getMirrorEvents.useQuery(
+    { startDate: windowStart, endDate: windowEnd },
+    { enabled: gcConnected }
+  );
+
+  const syncMutation = trpc.googleCalendar.sync.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Synced ${data.count} event${data.count === 1 ? '' : 's'} from Google Calendar`);
+      refetchMirror();
+    },
+    onError: () => toast.error('Google Calendar sync failed'),
+  });
+
+  // Mirror events for the active date
+  const dayMirrorEvents = useMemo(() => {
+    if (!mirrorEvents) return [];
+    return mirrorEvents.filter(e => e.date === activeDateStr && e.startMin !== null);
+  }, [mirrorEvents, activeDateStr]);
 
   // Items on the active day (recurrence-expanded)
   const scheduledTasks = useMemo(
@@ -119,6 +152,10 @@ export default function CalendarPage() {
   const minToTop = (min: number) => ((min - gridTopMin) / 60) * HOUR_PX;
   const durToHeight = (mins: number) => Math.max(22, (mins / 60) * HOUR_PX);
 
+  // Day strip dot indicator: includes mirror events
+  const hasMirrorOnDay = (ds: string) =>
+    (mirrorEvents ?? []).some(e => e.date === ds && e.startMin !== null);
+
   return (
     <div className="pb-4">
       {/* TOPBAR */}
@@ -128,6 +165,21 @@ export default function CalendarPage() {
           <div className="topbar-sub">{monthLabel}</div>
         </div>
         <div className="flex items-center gap-2">
+          {gcConnected && (
+            <button
+              onClick={() => syncMutation.mutate({})}
+              disabled={syncMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--foreground)] bg-white hover:border-[var(--sky-light)] transition-colors disabled:opacity-50"
+              title="Pull latest events from Google Calendar"
+            >
+              {syncMutation.isPending ? (
+                <span className="animate-spin">⟳</span>
+              ) : (
+                <span>🔄</span>
+              )}
+              Sync Google
+            </button>
+          )}
           <button
             onClick={exportICS}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--foreground)] bg-white hover:border-[var(--sky-light)] transition-colors"
@@ -153,7 +205,8 @@ export default function CalendarPage() {
           const isToday = ds === todayStr;
           const hasEvent =
             state.tasks.some(t => tasksOnDate([t], ds).length > 0 && t.scheduledTime) ||
-            state.timeBlocks.some(b => blocksOnDate([b], ds).length > 0);
+            state.timeBlocks.some(b => blocksOnDate([b], ds).length > 0) ||
+            hasMirrorOnDay(ds);
           return (
             <button
               key={ds}
@@ -273,6 +326,34 @@ export default function CalendarPage() {
                     </div>
                   );
                 })}
+
+                {/* Google Calendar mirror events (read-only, overlaid on right half) */}
+                {dayMirrorEvents.map(ev => {
+                  const startMin = ev.startMin!;
+                  const endMin = ev.endMin ?? startMin + 60;
+                  const color = ev.colorHex ?? '#4285F4';
+                  return (
+                    <div
+                      key={ev.id}
+                      className="absolute rounded-lg px-2 py-1 overflow-hidden border border-dashed"
+                      title={`${ev.title}${ev.calendarName ? ` · ${ev.calendarName}` : ''}`}
+                      style={{
+                        top: `${minToTop(startMin) + 2}px`,
+                        height: `${durToHeight(endMin - startMin) - 4}px`,
+                        left: '50%', width: '49%',
+                        background: `${color}18`,
+                        borderColor: color,
+                        zIndex: 2,
+                      }}
+                    >
+                      <p className="text-xs font-semibold truncate flex items-center gap-1" style={{ color }}>
+                        <span className="text-[9px] font-bold bg-white rounded px-0.5" style={{ color }}>G</span>
+                        {ev.title}
+                      </p>
+                      <p className="text-[10px]" style={{ color: `${color}cc` }}>{minToLabel(startMin)}–{minToLabel(endMin)}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -280,6 +361,7 @@ export default function CalendarPage() {
           {/* Hint */}
           <p className="text-[11px] text-[var(--muted-foreground)] px-3 mt-2">
             Tap an empty slot to add a time block · drag a task in from the side to schedule it.
+            {gcConnected && <span className="ml-2 text-[#4285F4]">· Google events shown in dashed outline</span>}
           </p>
         </div>
 

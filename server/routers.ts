@@ -51,6 +51,18 @@ import {
   type Period,
 } from "./insights";
 import { answerQuestion } from "./askManus";
+import { googleCalendarRouter } from "./routers/googleCalendar";
+import {
+  pushEventToGoogle,
+  deleteEventFromGoogle,
+  getGoogleConnectionStatus,
+} from "./googleCalendar";
+import {
+  getTaskById,
+  updateTaskGoogleEventId,
+  getTimeBlockById,
+  updateTimeBlockGoogleEventId,
+} from "./db";
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
@@ -243,9 +255,12 @@ export const appRouter = router({
     upsert: workspaceProcedure
       .input(TaskSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertTask(ctx.workspaceOwnerId!, {
+        const userId = ctx.workspaceOwnerId!;
+        // Fetch existing task to preserve googleEventId
+        const existing = await getTaskById(userId, input.id);
+        await upsertTask(userId, {
           id: input.id,
-          userId: ctx.workspaceOwnerId!,
+          userId,
           title: input.title,
           categoryId: input.categoryId,
           column: input.column,
@@ -261,13 +276,49 @@ export const appRouter = router({
           completedAt: input.completedAt ?? null,
           recurFreq: input.recurFreq ?? null,
           recurEndDate: input.recurEndDate ?? null,
+          googleEventId: existing?.googleEventId ?? null,
         });
+        // Push to Google Calendar if task has a scheduled date (and is not recurring)
+        if (input.scheduledDate && !input.recurFreq) {
+          const { connected } = await getGoogleConnectionStatus(userId);
+          if (connected) {
+            // Parse scheduledTime like "09:30" into minutes
+            let startMin: number | null = null;
+            let endMin: number | null = null;
+            if (input.scheduledTime) {
+              const [h, m] = input.scheduledTime.split(":").map(Number);
+              startMin = h * 60 + m;
+              // Estimate end from duration string like "1h 30m" or "30m"
+              if (input.duration) {
+                const hMatch = input.duration.match(/(\d+)h/);
+                const mMatch = input.duration.match(/(\d+)m/);
+                const durationMin = (hMatch ? parseInt(hMatch[1]) * 60 : 0) + (mMatch ? parseInt(mMatch[1]) : 0);
+                endMin = startMin + (durationMin || 60);
+              } else {
+                endMin = startMin + 60;
+              }
+            }
+            pushEventToGoogle(
+              userId,
+              { title: input.title, date: input.scheduledDate, startMin, endMin, description: input.notes ?? undefined },
+              existing?.googleEventId ?? null
+            ).then((gId) => {
+              if (gId) updateTaskGoogleEventId(userId, input.id, gId);
+            }).catch(() => {});
+          }
+        }
         return { success: true };
       }),
     delete: workspaceProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await deleteTask(ctx.workspaceOwnerId!, input.id);
+        const userId = ctx.workspaceOwnerId!;
+        const existing = await getTaskById(userId, input.id);
+        await deleteTask(userId, input.id);
+        // Fire-and-forget delete from Google Calendar
+        if (existing?.googleEventId) {
+          deleteEventFromGoogle(userId, existing.googleEventId).catch(() => {});
+        }
         return { success: true };
       }),
   }),
@@ -280,9 +331,12 @@ export const appRouter = router({
     upsert: workspaceProcedure
       .input(TimeBlockSchema)
       .mutation(async ({ ctx, input }) => {
-        await upsertTimeBlock(ctx.workspaceOwnerId!, {
+        const userId = ctx.workspaceOwnerId!;
+        // Fetch existing block to get its current googleEventId
+        const existing = await getTimeBlockById(userId, input.id);
+        await upsertTimeBlock(userId, {
           id: input.id,
-          userId: ctx.workspaceOwnerId!,
+          userId,
           title: input.title,
           date: input.date,
           startMin: input.startMin,
@@ -292,13 +346,33 @@ export const appRouter = router({
           recurFreq: input.recurFreq ?? null,
           recurEndDate: input.recurEndDate ?? null,
           createdAt: input.createdAt,
+          googleEventId: existing?.googleEventId ?? null,
         });
+        // Fire-and-forget push to Google Calendar (only for non-recurring blocks)
+        if (!input.recurFreq) {
+          const { connected } = await getGoogleConnectionStatus(userId);
+          if (connected) {
+            pushEventToGoogle(
+              userId,
+              { title: input.title, date: input.date, startMin: input.startMin, endMin: input.endMin },
+              existing?.googleEventId ?? null
+            ).then((gId) => {
+              if (gId) updateTimeBlockGoogleEventId(userId, input.id, gId);
+            }).catch(() => {});
+          }
+        }
         return { success: true };
       }),
     delete: workspaceProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await deleteTimeBlock(ctx.workspaceOwnerId!, input.id);
+        const userId = ctx.workspaceOwnerId!;
+        const existing = await getTimeBlockById(userId, input.id);
+        await deleteTimeBlock(userId, input.id);
+        // Fire-and-forget delete from Google Calendar
+        if (existing?.googleEventId) {
+          deleteEventFromGoogle(userId, existing.googleEventId).catch(() => {});
+        }
         return { success: true };
       }),
   }),
@@ -803,6 +877,9 @@ export const appRouter = router({
       };
     }),
   }),
+
+  // ─── Google Calendar ─────────────────────────────────────────────────────────
+  googleCalendar: googleCalendarRouter,
 });
 
 export type AppRouter = typeof appRouter;

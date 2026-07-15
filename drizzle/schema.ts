@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   float,
   int,
@@ -81,6 +82,7 @@ export const tasks = mysqlTable("tasks", {
   // Recurrence (optional): a task with recurFreq generates occurrences up to recurEndDate.
   recurFreq: mysqlEnum("recurFreq", ["daily", "weekly"]),
   recurEndDate: varchar("recurEndDate", { length: 10 }), // YYYY-MM-DD inclusive
+  googleEventId: varchar("googleEventId", { length: 128 }), // Google Calendar event ID for push sync
 });
 
 export type TaskRow = typeof tasks.$inferSelect;
@@ -98,6 +100,7 @@ export const timeBlocks = mysqlTable("time_blocks", {
   recurFreq: mysqlEnum("recurFreq", ["daily", "weekly"]),
   recurEndDate: varchar("recurEndDate", { length: 10 }),
   createdAt: varchar("createdAt", { length: 10 }).notNull(),
+  googleEventId: varchar("googleEventId", { length: 128 }), // Google Calendar event ID for push sync
 });
 
 export type TimeBlockRow = typeof timeBlocks.$inferSelect;
@@ -269,3 +272,50 @@ export const projectMilestones = mysqlTable("project_milestones", {
 });
 
 export type ProjectMilestoneRow = typeof projectMilestones.$inferSelect;
+
+// ─── Google Calendar Integration ─────────────────────────────────────────────
+
+/** Stores the user's Google OAuth tokens for Calendar API access. */
+export const googleTokens = mysqlTable("google_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken").notNull(),
+  expiresAt: bigint("expiresAt", { mode: "number" }).notNull(), // ms since epoch
+  scope: text("scope"),
+  email: varchar("email", { length: 320 }), // Google account email shown in Settings
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GoogleTokenRow = typeof googleTokens.$inferSelect;
+
+/** Mirrored Google Calendar events pulled from the user's external calendars. Read-only. */
+export const googleCalendarEvents = mysqlTable("google_calendar_events", {
+  id: varchar("id", { length: 128 }).primaryKey(), // composite: calendarId:eventId
+  userId: int("userId").notNull(),
+  googleCalendarId: varchar("googleCalendarId", { length: 256 }).notNull(),
+  googleEventId: varchar("googleEventId", { length: 128 }).notNull(),
+  title: varchar("title", { length: 512 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD (start date)
+  startMin: int("startMin"), // minutes from midnight; null = all-day
+  endMin: int("endMin"),
+  endDate: varchar("endDate", { length: 10 }), // YYYY-MM-DD end date (for multi-day)
+  description: text("description"),
+  colorHex: varchar("colorHex", { length: 7 }),
+  calendarName: varchar("calendarName", { length: 256 }),
+  syncedAt: timestamp("syncedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GoogleCalendarEventRow = typeof googleCalendarEvents.$inferSelect;
+
+/** Which of the user's Google calendars to pull events from. */
+export const googleSyncCalendars = mysqlTable("google_sync_calendars", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  calendarId: varchar("calendarId", { length: 256 }).notNull(),
+  calendarName: varchar("calendarName", { length: 256 }).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  colorHex: varchar("colorHex", { length: 7 }),
+});
+
+export type GoogleSyncCalendarRow = typeof googleSyncCalendars.$inferSelect;

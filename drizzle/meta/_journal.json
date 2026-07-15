@@ -64,6 +64,13 @@
       "when": 1781362194874,
       "tag": "0008_faulty_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1784085856173,
+      "tag": "0009_conscious_boomer",
+      "breakpoints": true
     }
   ]
 }

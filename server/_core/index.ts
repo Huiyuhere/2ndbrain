@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { scheduledInsightsHandler } from "../scheduledInsights";
+import { scheduledGoogleSyncHandler } from "../scheduledGoogleSync";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -47,6 +48,7 @@ async function startServer() {
   );
   // Scheduled (Heartbeat) endpoints — must be registered before the Vite/static fallthrough.
   app.post("/api/scheduled/insights", scheduledInsightsHandler);
+  app.post("/api/scheduled/google-sync", scheduledGoogleSyncHandler);
 
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {

@@ -210,3 +210,14 @@
 - [ ] Reflections Quarter view: "Show this quarter's insights" panel above the quarterly reflection entry
 - [ ] Tests (getQuoteOfDay determinism, period range + insights data assembly); tsc clean; checkpoint
 - [ ] Insights tone: "CEO mentor" — direct, calls out leaky buckets/excuses, ends with non-negotiable orders (grounded in real data only)
+
+## Google Calendar Two-Way Sync
+
+- [x] Phase 1: DB schema — google_tokens, google_calendar_events, google_sync_calendars tables; googleEventId on time_blocks and tasks
+- [x] Phase 2: server/googleCalendar.ts — token management, push event, delete event, pull events, list calendars
+- [x] Phase 3: OAuth connect/disconnect tRPC procedures (googleCalendar.status, saveTokens, disconnect, listCalendars)
+- [x] Phase 4: Push wiring — timeBlocks.upsert/delete and tasks.upsert/delete call push/delete on Google
+- [x] Phase 5: Pull — googleCalendar.sync mutation and getMirrorEvents query
+- [x] Phase 6: Calendar UI — mirror events layer (read-only, G badge) and Sync Google button
+- [x] Phase 7: Settings page — Google Calendar integration card (connect/disconnect, calendar selector, last synced)
+- [x] Phase 8: Tests, checkpoint, delivery

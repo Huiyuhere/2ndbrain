@@ -135,6 +135,17 @@ export async function upsertTask(userId: number, task: typeof tasks.$inferInsert
   });
 }
 
+export async function getTaskById(userId: number, taskId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(tasks).where(and(eq(tasks.id, taskId), eq(tasks.userId, userId))).limit(1);
+  return rows[0] ?? null;
+}
+export async function updateTaskGoogleEventId(userId: number, taskId: string, googleEventId: string | null) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(tasks).set({ googleEventId }).where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)));
+}
 export async function deleteTask(userId: number, taskId: string) {
   const db = await getDb();
   if (!db) return;
@@ -165,6 +176,17 @@ export async function upsertTimeBlock(userId: number, block: typeof timeBlocks.$
   });
 }
 
+export async function getTimeBlockById(userId: number, id: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(timeBlocks).where(and(eq(timeBlocks.id, id), eq(timeBlocks.userId, userId))).limit(1);
+  return rows[0] ?? null;
+}
+export async function updateTimeBlockGoogleEventId(userId: number, id: string, googleEventId: string | null) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(timeBlocks).set({ googleEventId }).where(and(eq(timeBlocks.id, id), eq(timeBlocks.userId, userId)));
+}
 export async function deleteTimeBlock(userId: number, id: string) {
   const db = await getDb();
   if (!db) return;
