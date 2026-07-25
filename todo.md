@@ -228,3 +228,8 @@
 - [x] Phase 3: Wire mic buttons into Today page (morning + evening fields)
 - [x] Phase 4: Wire mic buttons into Reflections page (weekly, monthly, quarterly)
 - [x] Phase 5: Tests, checkpoint, delivery
+
+## Evening Voice Dump (Single Mic)
+- [x] Phase 1: voice.parseEveningDump tRPC procedure
+- [x] Phase 2: EveningVoiceDump UI component
+- [x] Phase 3: Tests, checkpoint, delivery

@@ -7,6 +7,7 @@ import GoalBanner from '@/components/GoalBanner';
 import QuoteBanner from '@/components/QuoteBanner';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceMicButton from '@/components/VoiceMicButton';
+import EveningVoiceDump from '@/components/EveningVoiceDump';
 
 // Compute YYYY-MM-DD for a given offset back from today (in local TZ)
 function dateStringForOffset(offsetDays: number): string {
@@ -297,6 +298,29 @@ export default function Today() {
                 </div>
               ) : (
                 <>
+                  {/* SINGLE MIC DUMP */}
+                  <EveningVoiceDump
+                    onApply={({ title, highlights, freeWrite }) => {
+                      if (title) setDayTitle(title);
+                      if (highlights.length > 0) {
+                        setHighlights(prev => {
+                          // Replace empty slots first, then append new ones
+                          const filled = [...prev];
+                          for (const h of highlights) {
+                            const emptyIdx = filled.findIndex(x => !x.text);
+                            if (emptyIdx !== -1) {
+                              filled[emptyIdx] = h;
+                            } else {
+                              filled.push(h);
+                            }
+                          }
+                          return filled;
+                        });
+                      }
+                      if (freeWrite) setFreeWrite(prev => prev ? prev + '\n\n' + freeWrite : freeWrite);
+                    }}
+                  />
+
                   {/* Photo + location */}
                   <div className="flex gap-3 mb-4">
                     <div className="w-16 h-16 rounded-xl bg-[var(--muted)] border-2 border-dashed border-[var(--border)] flex items-center justify-center text-2xl cursor-pointer shrink-0">📷</div>

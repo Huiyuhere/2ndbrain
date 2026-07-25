@@ -137,3 +137,79 @@ describe('voice.transcribeAndClean', () => {
     );
   });
 });
+
+describe('voice.parseEveningDump', () => {
+  it('parses a brain dump into title, highlights, and freeWrite', async () => {
+    mockTranscribeAudio.mockResolvedValueOnce({
+      text: 'Today was great. I finished the project. But I was late to the meeting.',
+      language: 'en',
+      segments: [],
+      duration: 5.0,
+      task: 'transcribe',
+    } as never);
+
+    mockInvokeLLM.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            title: 'A day of contrasts',
+            highlights: [
+              { type: '+', text: 'Finished the project' },
+              { type: '-', text: 'Was late to the meeting' },
+            ],
+            freeWrite: '',
+          }),
+        },
+      }],
+    } as never);
+
+    const result = await caller.voice.parseEveningDump({
+      audioUrl: 'https://storage.example.com/voice/dump.webm',
+    });
+
+    expect(result.title).toBe('A day of contrasts');
+    expect(result.highlights).toHaveLength(2);
+    expect(result.highlights[0]).toEqual({ type: '+', text: 'Finished the project' });
+    expect(result.highlights[1]).toEqual({ type: '-', text: 'Was late to the meeting' });
+  });
+
+  it('falls back to freeWrite when LLM parsing fails', async () => {
+    mockTranscribeAudio.mockResolvedValueOnce({
+      text: 'Had a busy day.',
+      language: 'en',
+      segments: [],
+      duration: 1.5,
+      task: 'transcribe',
+    } as never);
+
+    mockInvokeLLM.mockRejectedValueOnce(new Error('LLM error'));
+
+    const result = await caller.voice.parseEveningDump({
+      audioUrl: 'https://storage.example.com/voice/dump2.webm',
+    });
+
+    expect(result.rawText).toBe('Had a busy day.');
+    expect(result.freeWrite).toBe('Had a busy day.');
+    expect(result.highlights).toEqual([]);
+  });
+
+  it('returns empty result for silent recording', async () => {
+    mockTranscribeAudio.mockResolvedValueOnce({
+      text: '',
+      language: 'en',
+      segments: [],
+      duration: 0.5,
+      task: 'transcribe',
+    } as never);
+
+    const result = await caller.voice.parseEveningDump({
+      audioUrl: 'https://storage.example.com/voice/silent.webm',
+    });
+
+    expect(result.rawText).toBe('');
+    expect(result.title).toBe('');
+    expect(result.highlights).toEqual([]);
+    expect(result.freeWrite).toBe('');
+    expect(mockInvokeLLM).not.toHaveBeenCalled();
+  });
+});
