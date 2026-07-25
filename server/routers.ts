@@ -52,6 +52,7 @@ import {
 } from "./insights";
 import { answerQuestion } from "./askManus";
 import { googleCalendarRouter } from "./routers/googleCalendar";
+import { voiceRouter } from "./routers/voice";
 import {
   pushEventToGoogle,
   deleteEventFromGoogle,
@@ -880,6 +881,7 @@ export const appRouter = router({
 
   // ─── Google Calendar ─────────────────────────────────────────────────────────
   googleCalendar: googleCalendarRouter,
+  voice: voiceRouter,
 });
 
 export type AppRouter = typeof appRouter;

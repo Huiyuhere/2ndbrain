@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import multer from "multer";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -10,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { scheduledInsightsHandler } from "../scheduledInsights";
 import { scheduledGoogleSyncHandler } from "../scheduledGoogleSync";
+import { storagePut } from "../storage";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -46,6 +48,35 @@ async function startServer() {
       createContext,
     })
   );
+  // Voice audio upload endpoint — accepts multipart audio blob, uploads to S3, returns URL
+  const voiceUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 16 * 1024 * 1024 }, // 16 MB
+    fileFilter: (_req, file, cb) => {
+      const allowed = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/x-m4a', 'video/webm'];
+      cb(null, allowed.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/webm'));
+    },
+  });
+  app.post('/api/voice/upload', voiceUpload.single('audio'), async (req: express.Request & { file?: Express.Multer.File }, res) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'No audio file provided' });
+        return;
+      }
+      const ext = req.file.mimetype.includes('mp4') || req.file.mimetype.includes('m4a') ? 'm4a'
+        : req.file.mimetype.includes('ogg') ? 'ogg'
+        : req.file.mimetype.includes('wav') ? 'wav'
+        : req.file.mimetype.includes('mpeg') ? 'mp3'
+        : 'webm';
+      const key = `voice/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { url } = await storagePut(key, req.file.buffer, req.file.mimetype);
+      res.json({ url });
+    } catch (err) {
+      console.error('[voice/upload]', err);
+      res.status(500).json({ error: 'Upload failed' });
+    }
+  });
+
   // Scheduled (Heartbeat) endpoints — must be registered before the Vite/static fallthrough.
   app.post("/api/scheduled/insights", scheduledInsightsHandler);
   app.post("/api/scheduled/google-sync", scheduledGoogleSyncHandler);

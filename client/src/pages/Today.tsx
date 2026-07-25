@@ -6,6 +6,7 @@ import TaskCard from '@/components/TaskCard';
 import GoalBanner from '@/components/GoalBanner';
 import QuoteBanner from '@/components/QuoteBanner';
 import { motion, AnimatePresence } from 'framer-motion';
+import VoiceMicButton from '@/components/VoiceMicButton';
 
 // Compute YYYY-MM-DD for a given offset back from today (in local TZ)
 function dateStringForOffset(offsetDays: number): string {
@@ -256,7 +257,10 @@ export default function Today() {
               ) : (
                 <>
                   <div className="prompt-block">
-                    <div className="prompt-q">☀️ {isToday ? "Today's intention" : `Intention for ${prettyDateLabel(selectedDate)}`}</div>
+                    <div className="prompt-q flex items-center justify-between">
+                      <span>☀️ {isToday ? "Today's intention" : `Intention for ${prettyDateLabel(selectedDate)}`}</span>
+                      <VoiceMicButton fieldHint="morning intention" onTranscript={t => setIntention(prev => prev ? prev + ' ' + t : t)} />
+                    </div>
                     <input
                       className="input-field font-['Playfair_Display'] italic"
                       placeholder="What am I here to do today?"
@@ -265,7 +269,10 @@ export default function Today() {
                     />
                   </div>
                   <div className="prompt-block">
-                    <div className="prompt-q">🎯 #1 focus task</div>
+                    <div className="prompt-q flex items-center justify-between">
+                      <span>🎯 #1 focus task</span>
+                      <VoiceMicButton fieldHint="number one focus task for today" onTranscript={t => setFocus(prev => prev ? prev + ' ' + t : t)} />
+                    </div>
                     <input
                       className="input-field"
                       placeholder="The single most important thing..."
@@ -300,7 +307,10 @@ export default function Today() {
                   </div>
 
                   <div className="prompt-block">
-                    <div className="prompt-q">{isToday ? "Today's title or quote" : `Title or quote for ${prettyDateLabel(selectedDate)}`}</div>
+                    <div className="prompt-q flex items-center justify-between">
+                      <span>{isToday ? "Today's title or quote" : `Title or quote for ${prettyDateLabel(selectedDate)}`}</span>
+                      <VoiceMicButton fieldHint="day title or quote" onTranscript={t => setDayTitle(prev => prev ? prev + ' ' + t : t)} />
+                    </div>
                     <input className="input-field font-['Playfair_Display'] italic" placeholder="有光的地方 ♥" value={dayTitle} onChange={e => setDayTitle(e.target.value)} />
                   </div>
 
@@ -361,6 +371,10 @@ export default function Today() {
                             value={h.text}
                             onChange={e => setHighlights(hs => hs.map((x, j) => j === i ? { ...x, text: e.target.value } : x))}
                           />
+                          <VoiceMicButton
+                            fieldHint={h.type === '+' ? 'highlight or win from today' : 'lesson or thing that did not go well'}
+                            onTranscript={t => setHighlights(hs => hs.map((x, j) => j === i ? { ...x, text: x.text ? x.text + ' ' + t : t } : x))}
+                          />
                         </div>
                       ))}
                       <button
@@ -373,7 +387,10 @@ export default function Today() {
                   </div>
 
                   <div className="prompt-block">
-                    <div className="prompt-q">Free write (optional)</div>
+                    <div className="prompt-q flex items-center justify-between">
+                      <span>Free write (optional)</span>
+                      <VoiceMicButton fieldHint="free write journal entry, anything on your mind" onTranscript={t => setFreeWrite(prev => prev ? prev + '\n\n' + t : t)} />
+                    </div>
                     <textarea className="input-field min-h-[80px] resize-none" placeholder="Anything else on your mind..." value={freeWrite} onChange={e => setFreeWrite(e.target.value)} />
                   </div>
 

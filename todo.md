@@ -221,3 +221,10 @@
 - [x] Phase 6: Calendar UI — mirror events layer (read-only, G badge) and Sync Google button
 - [x] Phase 7: Settings page — Google Calendar integration card (connect/disconnect, calendar selector, last synced)
 - [x] Phase 8: Tests, checkpoint, delivery
+
+## AI Voice Input for Journaling
+- [x] Phase 1: Server — voice.transcribeAndClean tRPC procedure + /api/voice/upload endpoint
+- [x] Phase 2: VoiceMicButton and VoiceRecordingSheet components
+- [x] Phase 3: Wire mic buttons into Today page (morning + evening fields)
+- [x] Phase 4: Wire mic buttons into Reflections page (weekly, monthly, quarterly)
+- [x] Phase 5: Tests, checkpoint, delivery

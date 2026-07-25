@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '@/components/BackButton';
 import InsightPanel from '@/components/InsightPanel';
 import { trpc } from '@/lib/trpc';
+import VoiceMicButton from '@/components/VoiceMicButton';
 
 type Tab = 'weekly' | 'monthly' | 'quarterly';
 
@@ -207,7 +208,13 @@ export default function Reflections() {
             <div className="px-4 space-y-4">
               {prompts.map(p => (
                 <div key={p.key} className="prompt-block">
-                  <div className="prompt-q">{p.q}</div>
+                  <div className="prompt-q flex items-center justify-between">
+                    <span>{p.q}</span>
+                    <VoiceMicButton
+                      fieldHint={p.q.replace(/^[^a-zA-Z]+/, '')}
+                      onTranscript={t => setAnswers(a => ({ ...a, [p.key]: a[p.key] ? a[p.key] + '\n\n' + t : t }))}
+                    />
+                  </div>
                   <textarea
                     className="input-field resize-none"
                     rows={3}
