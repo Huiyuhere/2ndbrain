@@ -26,8 +26,9 @@ interface Props {
 
 type State = 'idle' | 'recording' | 'processing';
 
-// Pick the best supported MIME type for this browser
+/** Pick the best MIME type supported by this browser (iOS = mp4, Chrome/Firefox = webm) */
 function getBestMimeType(): string {
+  if (typeof MediaRecorder === 'undefined') return '';
   const candidates = [
     'audio/webm;codecs=opus',
     'audio/webm',
@@ -39,6 +40,14 @@ function getBestMimeType(): string {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
   return '';
+}
+
+/** Get the file extension for a given MIME type */
+function getExtForMime(mime: string): string {
+  if (mime.includes('mp4') || mime.includes('m4a')) return 'm4a';
+  if (mime.includes('ogg')) return 'ogg';
+  if (mime.includes('wav')) return 'wav';
+  return 'webm';
 }
 
 export default function VoiceMicButton({ onTranscript, fieldHint, className = '' }: Props) {
@@ -77,7 +86,7 @@ export default function VoiceMicButton({ onTranscript, fieldHint, className = ''
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      recorder.start(100); // collect in 100ms chunks
+      recorder.start(1000); // 1s chunks — more reliable on iOS Safari
       setState('recording');
     } catch (err) {
       console.error('[VoiceMicButton] getUserMedia failed:', err);
@@ -98,9 +107,16 @@ export default function VoiceMicButton({ onTranscript, fieldHint, className = ''
       audioCtxRef.current = null;
     }
 
-    // Stop the recorder and wait for final data
+    // Request any remaining data before stopping (not all browsers support this)
+    try { recorder.requestData(); } catch { /* ignore */ }
+
+    // Stop the recorder with timeout fallback (iOS Safari onstop can be unreliable)
     await new Promise<void>((resolve) => {
-      recorder.onstop = () => resolve();
+      const timeout = setTimeout(() => resolve(), 2000); // 2s safety timeout
+      recorder.onstop = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
       recorder.stop();
     });
 
@@ -108,11 +124,12 @@ export default function VoiceMicButton({ onTranscript, fieldHint, className = ''
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
 
-    const mimeType = recorder.mimeType || 'audio/webm';
-    const blob = new Blob(chunksRef.current, { type: mimeType });
+    const actualMime = recorder.mimeType || 'audio/webm';
+    const ext = getExtForMime(actualMime);
+    const blob = new Blob(chunksRef.current, { type: actualMime });
     chunksRef.current = [];
 
-    if (blob.size < 1000) {
+    if (blob.size < 500) {
       toast.error('Recording was too short. Please try again.');
       setState('idle');
       return;
@@ -121,20 +138,24 @@ export default function VoiceMicButton({ onTranscript, fieldHint, className = ''
     try {
       // Step 1: Upload audio blob to get a storage URL
       const formData = new FormData();
-      formData.append('audio', blob, 'recording.webm');
+      formData.append('audio', blob, `recording.${ext}`);
       const uploadResp = await fetch('/api/voice/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include',
       });
       if (!uploadResp.ok) {
-        throw new Error(`Upload failed: ${uploadResp.status}`);
+        const errText = await uploadResp.text().catch(() => '');
+        throw new Error(`Upload failed (${uploadResp.status}): ${errText}`);
       }
-      const { url } = await uploadResp.json() as { url: string };
+      const { url: audioPath } = await uploadResp.json() as { url: string };
+
+      // Convert relative path to full URL for Zod .url() validation
+      const audioUrl = audioPath.startsWith('http') ? audioPath : `${window.location.origin}${audioPath}`;
 
       // Step 2: Transcribe + clean via tRPC
       const result = await transcribeMutation.mutateAsync({
-        audioUrl: url,
+        audioUrl,
         fieldHint,
       });
 

@@ -53,8 +53,8 @@ async function startServer() {
     storage: multer.memoryStorage(),
     limits: { fileSize: 16 * 1024 * 1024 }, // 16 MB
     fileFilter: (_req, file, cb) => {
-      const allowed = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/x-m4a', 'video/webm'];
-      cb(null, allowed.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/webm'));
+      // Accept all audio/* and video/* types — iOS Safari may send audio/mp4, video/mp4, etc.
+      cb(null, file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/') || file.mimetype === 'application/octet-stream');
     },
   });
   app.post('/api/voice/upload', voiceUpload.single('audio'), async (req: express.Request & { file?: Express.Multer.File }, res) => {

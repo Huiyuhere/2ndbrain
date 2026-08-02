@@ -46,7 +46,7 @@ export const voiceRouter = router({
   transcribeAndClean: workspaceProcedure
     .input(
       z.object({
-        audioUrl: z.string().url(),
+        audioUrl: z.string().min(1),
         /** Optional hint about which field this is for — helps LLM context */
         fieldHint: z.string().optional(),
       })
@@ -108,7 +108,7 @@ export const voiceRouter = router({
   parseEveningDump: workspaceProcedure
     .input(
       z.object({
-        audioUrl: z.string().url(),
+        audioUrl: z.string().min(1),
       })
     )
     .mutation(async ({ input }) => {

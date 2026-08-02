@@ -22,6 +22,30 @@ type Props = {
 
 type State = 'idle' | 'recording' | 'uploading' | 'parsing' | 'preview';
 
+/** Pick the best MIME type supported by this browser (iOS = mp4, Chrome/Firefox = webm) */
+function getBestMimeType(): string {
+  if (typeof MediaRecorder === 'undefined') return '';
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+  ];
+  for (const type of candidates) {
+    if (MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return '';
+}
+
+/** Get the file extension for a given MIME type */
+function getExtForMime(mime: string): string {
+  if (mime.includes('mp4') || mime.includes('m4a')) return 'm4a';
+  if (mime.includes('ogg')) return 'ogg';
+  if (mime.includes('wav')) return 'wav';
+  return 'webm';
+}
+
 export default function EveningVoiceDump({ onApply }: Props) {
   const [state, setState] = useState<State>('idle');
   const [parsed, setParsed] = useState<ParsedDump | null>(null);
@@ -30,6 +54,7 @@ export default function EveningVoiceDump({ onApply }: Props) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mimeTypeRef = useRef<string>('audio/webm');
 
   const parseMutation = trpc.voice.parseEveningDump.useMutation();
   const resetMutation = useCallback(() => parseMutation.reset(), []);
@@ -37,16 +62,15 @@ export default function EveningVoiceDump({ onApply }: Props) {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : 'audio/webm',
-      });
+      const mimeType = getBestMimeType();
+      mimeTypeRef.current = mimeType || 'audio/webm';
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
       recorder.ondataavailable = e => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
-      recorder.start(250);
+      recorder.start(1000); // 1s chunks — more reliable on iOS
       mediaRecorderRef.current = recorder;
       setState('recording');
       setRecordingSeconds(0);
@@ -65,23 +89,48 @@ export default function EveningVoiceDump({ onApply }: Props) {
       timerRef.current = null;
     }
 
+    // Request any remaining data before stopping
+    try { recorder.requestData(); } catch { /* some browsers don't support this */ }
+
+    // Stop recorder with timeout fallback (iOS Safari onstop can be unreliable)
     await new Promise<void>(resolve => {
-      recorder.onstop = () => resolve();
+      const timeout = setTimeout(() => resolve(), 2000); // 2s safety timeout
+      recorder.onstop = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
       recorder.stop();
-      recorder.stream.getTracks().forEach(t => t.stop());
     });
+
+    // Stop all mic tracks
+    recorder.stream.getTracks().forEach(t => t.stop());
 
     setState('uploading');
 
     try {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const actualMime = recorder.mimeType || mimeTypeRef.current;
+      const ext = getExtForMime(actualMime);
+      const blob = new Blob(chunksRef.current, { type: actualMime });
+      chunksRef.current = [];
+
+      if (blob.size < 500) {
+        toast.error('Recording was too short. Please try again.');
+        setState('idle');
+        return;
+      }
 
       // Upload audio
       const formData = new FormData();
-      formData.append('audio', blob, 'evening-dump.webm');
+      formData.append('audio', blob, `evening-dump.${ext}`);
       const uploadRes = await fetch('/api/voice/upload', { method: 'POST', body: formData, credentials: 'include' });
-      if (!uploadRes.ok) throw new Error('Upload failed');
-      const { url: audioUrl } = await uploadRes.json() as { url: string };
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text().catch(() => '');
+        throw new Error(`Upload failed (${uploadRes.status}): ${errText}`);
+      }
+      const { url: audioPath } = await uploadRes.json() as { url: string };
+
+      // Convert relative path to full URL for Zod validation
+      const audioUrl = audioPath.startsWith('http') ? audioPath : `${window.location.origin}${audioPath}`;
 
       setState('parsing');
 
@@ -119,6 +168,7 @@ export default function EveningVoiceDump({ onApply }: Props) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    chunksRef.current = [];
     setState('idle');
     setRecordingSeconds(0);
     resetMutation();
