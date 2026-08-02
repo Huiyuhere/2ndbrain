@@ -233,3 +233,8 @@
 - [x] Phase 1: voice.parseEveningDump tRPC procedure
 - [x] Phase 2: EveningVoiceDump UI component
 - [x] Phase 3: Tests, checkpoint, delivery
+
+## Voice Transcription Bug Fix + Conversational Redesign
+- [x] Fix transcription bug: resolve /manus-storage/ relative URL to signed S3 URL before Whisper
+- [x] Redesign EveningVoiceDump as conversational friend: warm prompts, follow-up questions, guided reflection
+- [x] Individual mic buttons also use signed URL resolution

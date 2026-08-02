@@ -10,6 +10,25 @@ import { z } from "zod";
 import { workspaceProcedure, router } from "../_core/trpc";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { invokeLLM } from "../_core/llm";
+import { storageGetSignedUrl } from "../storage";
+
+/**
+ * Resolve an audioUrl to a direct S3 signed URL that the server can fetch.
+ * The upload endpoint returns /manus-storage/voice/... which is a relative path
+ * that only works via the browser (307 redirect). Server-side fetch needs the
+ * actual S3 presigned URL.
+ */
+async function resolveAudioUrl(audioUrl: string): Promise<string> {
+  // If it's a /manus-storage/ path, extract the key and get a signed URL
+  const manusPrefix = '/manus-storage/';
+  if (audioUrl.includes(manusPrefix)) {
+    const idx = audioUrl.indexOf(manusPrefix);
+    const key = audioUrl.slice(idx + manusPrefix.length);
+    return storageGetSignedUrl(key);
+  }
+  // Already a full URL (e.g. https://...)
+  return audioUrl;
+}
 
 const CLEANUP_SYSTEM_PROMPT = `You are a journaling assistant. The user has dictated a journal entry using voice.
 Clean it up: remove filler words (um, uh, like, you know, sort of, kind of, basically, literally, right, okay so), fix obvious grammar mistakes, break run-on sentences into clean readable sentences, and preserve the user's original meaning and tone.
@@ -52,9 +71,12 @@ export const voiceRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      // Step 1: Transcribe via Whisper
+      // Step 1: Resolve the storage URL to a direct S3 signed URL
+      const resolvedUrl = await resolveAudioUrl(input.audioUrl);
+
+      // Step 2: Transcribe via Whisper
       const transcription = await transcribeAudio({
-        audioUrl: input.audioUrl,
+        audioUrl: resolvedUrl,
         language: "en",
         prompt: input.fieldHint
           ? `Journal entry for: ${input.fieldHint}`
@@ -112,20 +134,28 @@ export const voiceRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      // Step 1: Transcribe
-      const transcription = await transcribeAudio({
-        audioUrl: input.audioUrl,
-        language: "en",
-        prompt: "Evening journal brain dump — highlights, wins, lessons, reflections",
-      });
+      let rawText = "";
 
-      if ("error" in transcription) {
-        throw new Error(
-          `Transcription failed: ${transcription.error}${transcription.details ? ` (${transcription.details})` : ""}`
-        );
+      // Check if this is a text:// protocol (pre-transcribed text from conversational flow)
+      if (input.audioUrl.startsWith('text://')) {
+        rawText = decodeURIComponent(input.audioUrl.slice('text://'.length)).trim();
+      } else {
+        // Normal audio flow: resolve URL and transcribe
+        const resolvedUrl = await resolveAudioUrl(input.audioUrl);
+        const transcription = await transcribeAudio({
+          audioUrl: resolvedUrl,
+          language: "en",
+          prompt: "Evening journal brain dump \u2014 highlights, wins, lessons, reflections",
+        });
+
+        if ("error" in transcription) {
+          throw new Error(
+            `Transcription failed: ${transcription.error}${transcription.details ? ` (${transcription.details})` : ""}`
+          );
+        }
+        rawText = transcription.text?.trim() ?? "";
       }
 
-      const rawText = transcription.text?.trim() ?? "";
       if (!rawText) {
         return {
           rawText: "",
@@ -135,7 +165,7 @@ export const voiceRouter = router({
         };
       }
 
-      // Step 2: LLM structured extraction
+      // LLM structured extraction
       let title = "";
       let highlights: Array<{ type: "+" | "-"; text: string }> = [];
       let freeWrite = "";
