@@ -238,3 +238,10 @@
 - [x] Fix transcription bug: resolve /manus-storage/ relative URL to signed S3 URL before Whisper
 - [x] Redesign EveningVoiceDump as conversational friend: warm prompts, follow-up questions, guided reflection
 - [x] Individual mic buttons also use signed URL resolution
+
+## Conversational Reflection Chat + Collapsed Done + Q3 Fix
+- [x] Fix dynamic quarter labels: replace hardcoded Q2/Q3 with computed current/next quarter
+- [x] Collapse Done column: default collapsed, show only current Mon-Sun week tasks
+- [x] Server: voice.parseReflectionDump procedure (text + prompts → distributed answers)
+- [x] ReflectionVoiceChat component: conversational friend flow for all 3 reflection tabs
+- [x] Wire ReflectionVoiceChat into Reflections.tsx with session persistence across tab switches

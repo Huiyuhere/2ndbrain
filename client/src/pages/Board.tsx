@@ -8,6 +8,17 @@ import MorningCheckin from '@/components/MorningCheckin';
 import TaskCard from '@/components/TaskCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/** Get the Monday of the current ISO week in SGT (UTC+8) as YYYY-MM-DD */
+function getCurrentWeekStart(): string {
+  const now = new Date();
+  const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const day = sgt.getUTCDay(); // 0=Sun, 1=Mon...
+  const diff = day === 0 ? -6 : 1 - day; // Monday offset
+  const monday = new Date(sgt);
+  monday.setUTCDate(monday.getUTCDate() + diff);
+  return monday.toISOString().slice(0, 10);
+}
+
 type Column = { id: Task['column']; label: string; emoji: string; headerClass: string; countClass: string };
 
 const COLUMNS: Column[] = [
@@ -26,6 +37,7 @@ export default function Board() {
   const [addingTo, setAddingTo] = useState<Task['column'] | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [dragOverCol, setDragOverCol] = useState<Task['column'] | null>(null);
+  const [doneExpanded, setDoneExpanded] = useState(false);
   const dragTaskId = useRef<string | null>(null);
 
   // Open the morning check-in only AFTER data has loaded and only if not done today.
@@ -37,7 +49,18 @@ export default function Board() {
   }, [loading, state.checkinDone, dismissedCheckin]);
 
   const filtered = filterTasksByMode(state.tasks, state.focusMode);
-  const tasksByCol = (col: Task['column']) => filtered.filter(t => t.column === col);
+  const weekStart = getCurrentWeekStart();
+  const tasksByCol = (col: Task['column']) => {
+    const colTasks = filtered.filter(t => t.column === col);
+    if (col === 'done') {
+      // Only show tasks completed in the current Mon–Sun week
+      return colTasks.filter(t => {
+        const completedAt = t.completedAt || t.createdAt; // fallback for legacy
+        return completedAt >= weekStart;
+      });
+    }
+    return colTasks;
+  };
 
   function handleAddTask() {
     if (!newTitle.trim() || !addingTo) return;
@@ -129,6 +152,8 @@ export default function Board() {
         {COLUMNS.map(col => {
           const tasks = tasksByCol(col.id);
           const isOver = dragOverCol === col.id;
+          const isDoneCol = col.id === 'done';
+          const isCollapsed = isDoneCol && !doneExpanded;
           return (
             <div
               key={col.id}
@@ -138,11 +163,33 @@ export default function Board() {
               onDrop={e => handleDrop(e, col.id)}
             >
               {/* Column header */}
-              <div className={`flex items-center justify-between px-3 py-2 rounded-xl mb-2 ${col.headerClass}`}>
+              <div
+                className={`flex items-center justify-between px-3 py-2 rounded-xl mb-2 ${col.headerClass} ${isDoneCol ? 'cursor-pointer' : ''}`}
+                onClick={isDoneCol ? () => setDoneExpanded(e => !e) : undefined}
+              >
                 <span className="text-sm font-bold">{col.emoji} {col.label}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.countClass}`}>{tasks.length}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.countClass}`}>{tasks.length}</span>
+                  {isDoneCol && (
+                    <svg
+                      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      className={`transition-transform duration-200 ${doneExpanded ? 'rotate-180' : ''}`}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  )}
+                </div>
               </div>
 
+              {/* Collapsed Done hint */}
+              {isCollapsed && (
+                <div className="text-center py-3 text-xs text-[var(--muted-foreground)]">
+                  {tasks.length > 0 ? `${tasks.length} task${tasks.length > 1 ? 's' : ''} this week · tap to expand` : 'No tasks completed this week'}
+                </div>
+              )}
+
+              {!isCollapsed && (<>
               {/* Drop zone hint when dragging */}
               {isOver && (
                 <div className="mb-2 py-2 border-2 border-dashed border-[var(--sky)] rounded-xl text-center text-xs text-[var(--sky)] font-semibold">
@@ -185,6 +232,7 @@ export default function Board() {
                   + Add task
                 </button>
               )}
+              </>)}
             </div>
           );
         })}

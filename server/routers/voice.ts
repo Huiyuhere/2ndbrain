@@ -35,6 +35,24 @@ Clean it up: remove filler words (um, uh, like, you know, sort of, kind of, basi
 Do not add new content, do not summarise, do not change the intent or facts. Do not add any commentary or explanation.
 Return only the cleaned text, nothing else.`;
 
+const REFLECTION_DUMP_SYSTEM_PROMPT = `You are a journaling assistant helping a user fill in their reflection journal.
+
+The user spoke freely about their week/month/quarter. Your job is to distribute their words into the correct prompt fields.
+
+CRITICAL RULES:
+- Use the user's EXACT words and phrasing. Do NOT paraphrase, summarize, or polish.
+- Only remove filler words (um, uh, like, you know, basically, right, okay so).
+- If the user mentioned something that fits a prompt, put those exact sentences under that prompt key.
+- If something doesn't clearly fit any prompt, put it under the closest match.
+- If a prompt has no relevant content from the user, leave it as an empty string.
+- Return ONLY valid JSON, no explanation, no markdown code blocks.
+
+You will receive:
+1. The list of prompt keys and their questions
+2. The user's full transcript
+
+Return a JSON object where each key matches a prompt key and the value is the user's words that answer that prompt.`;
+
 const EVENING_DUMP_SYSTEM_PROMPT = `You are a journaling assistant helping a user fill in their evening journal from a single voice brain dump.
 
 Extract and classify the content into the following JSON structure:
@@ -223,5 +241,78 @@ export const voiceRouter = router({
       }
 
       return { rawText, title, highlights, freeWrite };
+    }),
+
+  /**
+   * Parse a reflection brain dump: takes pre-transcribed text + the prompt keys/questions,
+   * distributes the user's words into the correct prompt fields.
+   */
+  parseReflectionDump: workspaceProcedure
+    .input(
+      z.object({
+        text: z.string().min(1),
+        prompts: z.array(z.object({
+          key: z.string(),
+          question: z.string(),
+        })),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { text, prompts } = input;
+
+      // Build the schema dynamically based on prompts
+      const properties: Record<string, { type: string }> = {};
+      for (const p of prompts) {
+        properties[p.key] = { type: "string" };
+      }
+
+      const promptList = prompts.map(p => `- "${p.key}": ${p.question}`).join('\n');
+
+      try {
+        const llmResponse = await invokeLLM({
+          messages: [
+            { role: "system", content: REFLECTION_DUMP_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: `PROMPTS:\n${promptList}\n\nUSER'S TRANSCRIPT:\n${text}`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "reflection_answers",
+              strict: true,
+              schema: {
+                type: "object",
+                properties,
+                required: prompts.map(p => p.key),
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const content = llmResponse?.choices?.[0]?.message?.content;
+        if (typeof content === "string" && content.trim()) {
+          const parsed = JSON.parse(content) as Record<string, string>;
+          const result: Record<string, string> = {};
+          for (const p of prompts) {
+            result[p.key] = parsed[p.key] ?? "";
+          }
+          return { answers: result };
+        }
+      } catch (err) {
+        console.error("[voice] Reflection dump parsing failed:", err);
+      }
+
+      // Fallback: put everything in the first prompt
+      const fallback: Record<string, string> = {};
+      for (const p of prompts) {
+        fallback[p.key] = "";
+      }
+      if (prompts.length > 0) {
+        fallback[prompts[0].key] = text;
+      }
+      return { answers: fallback };
     }),
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getTodayString, getTodayLabel } from '@/lib/store';
 import { toast } from 'sonner';
@@ -7,10 +7,28 @@ import BackButton from '@/components/BackButton';
 import InsightPanel from '@/components/InsightPanel';
 import { trpc } from '@/lib/trpc';
 import VoiceMicButton from '@/components/VoiceMicButton';
+import ReflectionVoiceChat, { type ChatState } from '@/components/ReflectionVoiceChat';
 
 type Tab = 'weekly' | 'monthly' | 'quarterly';
 
-const WEEKLY_PROMPTS = [
+/** Get the current quarter number (1–4) based on SGT date */
+function getCurrentQuarterNum(): number {
+  const now = new Date();
+  // SGT = UTC+8
+  const sgt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  return Math.ceil((sgt.getUTCMonth() + 1) / 3);
+}
+
+function getCurrentQuarter(): string {
+  return `Q${getCurrentQuarterNum()}`;
+}
+
+function getNextQuarter(): string {
+  const q = getCurrentQuarterNum();
+  return `Q${q === 4 ? 1 : q + 1}`;
+}
+
+const WEEKLY_PROMPTS: Array<{ q: string; key: string }> = [
   { q: '🏆 What were my 3 biggest wins this week?', key: 'wins' },
   { q: '🧠 What did I learn or discover?', key: 'learned' },
   { q: '⚡ What drained my energy? What gave me energy?', key: 'energy' },
@@ -18,7 +36,7 @@ const WEEKLY_PROMPTS = [
   { q: '🔮 What is my #1 intention for next week?', key: 'nextWeek' },
 ];
 
-const MONTHLY_PROMPTS = [
+const MONTHLY_PROMPTS: Array<{ q: string; key: string }> = [
   { q: '📊 How did this month compare to my intention?', key: 'monthVsIntention' },
   { q: '💡 What is the most important thing I learned?', key: 'bigLesson' },
   { q: '🌊 What am I most proud of?', key: 'proud' },
@@ -26,16 +44,24 @@ const MONTHLY_PROMPTS = [
   { q: '🌙 Set your intention for next month:', key: 'nextMonth' },
 ];
 
-const QUARTERLY_PROMPTS = [
-  { q: '👑 Did I achieve my Q2 Focus Goal? What happened?', key: 'goalReview' },
-  { q: '📈 What moved the needle most this quarter?', key: 'leverage' },
-  { q: '🏔️ What did I avoid that I should have faced?', key: 'avoided' },
-  { q: '💎 What am I building that I am most proud of?', key: 'proud' },
-  { q: '🔮 What is my Q3 Focus Goal?', key: 'nextGoal' },
-  { q: '🌊 What does my ideal Q3 look like?', key: 'vision' },
-];
+function getQuarterlyPrompts(): Array<{ q: string; key: string }> {
+  const cq = getCurrentQuarter();
+  const nq = getNextQuarter();
+  return [
+    { q: `👑 Did I achieve my ${cq} Focus Goal? What happened?`, key: 'goalReview' },
+    { q: '📈 What moved the needle most this quarter?', key: 'leverage' },
+    { q: '🏔️ What did I avoid that I should have faced?', key: 'avoided' },
+    { q: '💎 What am I building that I am most proud of?', key: 'proud' },
+    { q: `🔮 What is my ${nq} Focus Goal?`, key: 'nextGoal' },
+    { q: `🌊 What does my ideal ${nq} look like?`, key: 'vision' },
+  ];
+}
 
-const PROMPTS_MAP = { weekly: WEEKLY_PROMPTS, monthly: MONTHLY_PROMPTS, quarterly: QUARTERLY_PROMPTS };
+const PROMPTS_MAP: Record<Tab, Array<{ q: string; key: string }>> = {
+  weekly: WEEKLY_PROMPTS,
+  monthly: MONTHLY_PROMPTS,
+  quarterly: getQuarterlyPrompts(),
+};
 
 const TAB_LABELS: Record<Tab, string> = { weekly: '📋 Weekly', monthly: '🌙 Monthly', quarterly: '👑 Quarterly' };
 
@@ -58,6 +84,14 @@ export default function Reflections() {
   const [saved, setSaved] = useState(false);
   const [expandedPast, setExpandedPast] = useState<string | null>(null);
   const [editingIntention, setEditingIntention] = useState(false);
+  // Session-persistent chat state per tab (survives tab switches)
+  const chatStatesRef = useRef<Record<Tab, ChatState | null>>({ weekly: null, monthly: null, quarterly: null });
+  const [chatState, setChatState] = useState<ChatState | null>(null);
+
+  const handleChatStateChange = useCallback((newState: ChatState | null) => {
+    chatStatesRef.current[tab] = newState;
+    setChatState(newState);
+  }, [tab]);
   const [intentionText, setIntentionText] = useState(state.monthlyIntention || '');
   const [editingQuarterlyGoal, setEditingQuarterlyGoal] = useState(false);
   const [quarterlyGoalText, setQuarterlyGoalText] = useState(state.quarterlyGoal?.text || '');
@@ -107,6 +141,8 @@ export default function Reflections() {
     setSaved(false);
     setEditingToday(false);
     setAnswers({});
+    // Restore chat state for the new tab
+    setChatState(chatStatesRef.current[t]);
   }
 
   const showForm = !todayEntry || editingToday;
@@ -179,7 +215,7 @@ export default function Reflections() {
             <textarea
               className="input-field resize-none mt-1"
               rows={2}
-              placeholder="What is your Q2 focus goal?"
+              placeholder={`What is your ${getCurrentQuarter()} focus goal?`}
               value={quarterlyGoalText}
               onChange={e => setQuarterlyGoalText(e.target.value)}
               autoFocus
@@ -205,6 +241,14 @@ export default function Reflections() {
       <AnimatePresence mode="wait">
         {showForm ? (
           <motion.div key="form" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+            {/* Conversational voice chat */}
+            <ReflectionVoiceChat
+              prompts={prompts}
+              onApply={(parsed) => setAnswers(a => ({ ...a, ...parsed }))}
+              chatState={chatState ?? undefined}
+              onChatStateChange={handleChatStateChange}
+            />
+
             <div className="px-4 space-y-4">
               {prompts.map(p => (
                 <div key={p.key} className="prompt-block">
