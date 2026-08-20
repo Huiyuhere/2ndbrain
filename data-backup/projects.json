@@ -1,0 +1,28 @@
+[
+  {
+    "id": "9Avc2RnzNxBr5ThYuhL9n",
+    "userId": 1,
+    "title": "Type Dates V3",
+    "emoji": "🎯",
+    "color": "#2E86C1",
+    "startDate": "2026-06-07",
+    "endDate": "2026-06-29",
+    "status": "active",
+    "description": "Test out new landing page + automated system",
+    "createdAt": "2026-06-03T13:49:21.000Z",
+    "updatedAt": "2026-06-03T14:19:32.000Z"
+  },
+  {
+    "id": "kPt7iY5Tt62YsHxQ1Fh56",
+    "userId": 1,
+    "title": "July Type",
+    "emoji": "🎨",
+    "color": "#6B5EA8",
+    "startDate": "2026-06-07",
+    "endDate": "2026-07-10",
+    "status": "completed",
+    "description": "60pax speed dating + party for 24-30 y/o singles @ acoustic coffee",
+    "createdAt": "2026-06-03T14:19:12.000Z",
+    "updatedAt": "2026-07-06T15:53:31.000Z"
+  }
+]

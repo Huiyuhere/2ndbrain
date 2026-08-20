@@ -1,0 +1,116 @@
+[
+  {
+    "id": "cat_1780491566390",
+    "userId": 1,
+    "name": "Social",
+    "emoji": "🌐",
+    "bgColor": "#5DADE220",
+    "textColor": "#5DADE2",
+    "keywords": [],
+    "sortOrder": 0
+  },
+  {
+    "id": "exercise",
+    "userId": 1,
+    "name": "Exercise",
+    "emoji": "🏃",
+    "bgColor": "#FDECEA",
+    "textColor": "#C0392B",
+    "keywords": [
+      "gym",
+      "run",
+      "workout",
+      "walk",
+      "exercise",
+      "sport"
+    ],
+    "sortOrder": 0
+  },
+  {
+    "id": "ideas",
+    "userId": 1,
+    "name": "Ideas",
+    "emoji": "💡",
+    "bgColor": "#FEF5E0",
+    "textColor": "#C9952A",
+    "keywords": [
+      "idea",
+      "biz",
+      "concept",
+      "filter",
+      "makeup"
+    ],
+    "sortOrder": 0
+  },
+  {
+    "id": "personal",
+    "userId": 1,
+    "name": "Personal",
+    "emoji": "🌸",
+    "bgColor": "#F0EDF8",
+    "textColor": "#6B5EA8",
+    "keywords": [
+      "journal",
+      "self",
+      "read",
+      "meditate",
+      "gym",
+      "walk",
+      "personal"
+    ],
+    "sortOrder": 0
+  },
+  {
+    "id": "planning",
+    "userId": 1,
+    "name": "Content",
+    "emoji": "🗂️",
+    "bgColor": "#FEF0E8",
+    "textColor": "#C4704A",
+    "keywords": [
+      "strategy",
+      "plan",
+      "branding",
+      "social",
+      "media",
+      "tiktok",
+      "niche"
+    ],
+    "sortOrder": 0
+  },
+  {
+    "id": "research",
+    "userId": 1,
+    "name": "Type",
+    "emoji": "🔍",
+    "bgColor": "#E8F8F2",
+    "textColor": "#2E8B57",
+    "keywords": [
+      "research",
+      "find",
+      "explore",
+      "question",
+      "venue"
+    ],
+    "sortOrder": 0
+  },
+  {
+    "id": "work",
+    "userId": 1,
+    "name": "Work",
+    "emoji": "💼",
+    "bgColor": "#E8F4FB",
+    "textColor": "#2471A3",
+    "keywords": [
+      "type",
+      "build",
+      "launch",
+      "bot",
+      "code",
+      "integrate",
+      "portfolio",
+      "tech"
+    ],
+    "sortOrder": 0
+  }
+]

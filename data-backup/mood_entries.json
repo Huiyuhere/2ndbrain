@@ -1,0 +1,578 @@
+[
+  {
+    "id": 30001,
+    "userId": 1,
+    "date": "2026-05-31",
+    "mood": 3,
+    "sleep": 9,
+    "intention": "Build focus",
+    "focus": "Build type tele bot"
+  },
+  {
+    "id": 60001,
+    "userId": 1,
+    "date": "2026-06-01",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "builder's focus",
+    "focus": "BUILD tele bot!!"
+  },
+  {
+    "id": 90001,
+    "userId": 1,
+    "date": "2026-06-02",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "Get into rhythm ",
+    "focus": "UGC review bot"
+  },
+  {
+    "id": 150001,
+    "userId": 1,
+    "date": "2026-06-03",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "Go home bfr 9pm",
+    "focus": "Plan out June schedule!! AND ASK FOR FUTURE PLAN!"
+  },
+  {
+    "id": 180001,
+    "userId": 1,
+    "date": "2026-06-04",
+    "mood": 3,
+    "sleep": 9,
+    "intention": "Learn from people",
+    "focus": "Set UGC deliverables deadlines"
+  },
+  {
+    "id": 210001,
+    "userId": 1,
+    "date": "2026-06-05",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "Document system ",
+    "focus": "Identify to builds, suggested timeline and gantt chart. Document/ links to materials"
+  },
+  {
+    "id": 240001,
+    "userId": 1,
+    "date": "2026-06-07",
+    "mood": 3,
+    "sleep": 9,
+    "intention": "Recharge",
+    "focus": "Posters for Type"
+  },
+  {
+    "id": 270001,
+    "userId": 1,
+    "date": "2026-06-08",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "Clarity - lead with a goal",
+    "focus": "list down to dos of the week"
+  },
+  {
+    "id": 300001,
+    "userId": 1,
+    "date": "2026-06-06",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "BRING THE CUPID ENERGY",
+    "focus": "type first chapter event!"
+  },
+  {
+    "id": 330001,
+    "userId": 1,
+    "date": "2026-06-10",
+    "mood": 4,
+    "sleep": 8,
+    "intention": "delegate!",
+    "focus": "FINISH UP CONTRACTS"
+  },
+  {
+    "id": 360001,
+    "userId": 1,
+    "date": "2026-06-11",
+    "mood": 4,
+    "sleep": 8,
+    "intention": "align with kpi",
+    "focus": "contacts - for thane, museon and vizzy"
+  },
+  {
+    "id": 390001,
+    "userId": 1,
+    "date": "2026-06-12",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "System Building",
+    "focus": "set kpi"
+  },
+  {
+    "id": 420001,
+    "userId": 1,
+    "date": "2026-06-13",
+    "mood": 3,
+    "sleep": 9,
+    "intention": "recharge",
+    "focus": "type marketing materials - slideshow"
+  },
+  {
+    "id": 450001,
+    "userId": 1,
+    "date": "2026-06-14",
+    "mood": 3,
+    "sleep": 10,
+    "intention": "nth...",
+    "focus": "social media carousel"
+  },
+  {
+    "id": 480001,
+    "userId": 1,
+    "date": "2026-06-15",
+    "mood": 4,
+    "sleep": 5,
+    "intention": "Wake up feel good",
+    "focus": "Prepare for meeting"
+  },
+  {
+    "id": 510001,
+    "userId": 1,
+    "date": "2026-06-16",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "cherish everyday",
+    "focus": "go off early"
+  },
+  {
+    "id": 540001,
+    "userId": 1,
+    "date": "2026-06-18",
+    "mood": 1,
+    "sleep": 9,
+    "intention": "outsource",
+    "focus": "set goals"
+  },
+  {
+    "id": 570001,
+    "userId": 1,
+    "date": "2026-06-19",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "survive through the week",
+    "focus": "give out scripts"
+  },
+  {
+    "id": 600001,
+    "userId": 1,
+    "date": "2026-06-22",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "Declutter",
+    "focus": "Clean my room"
+  },
+  {
+    "id": 630001,
+    "userId": 1,
+    "date": "2026-06-23",
+    "mood": 3,
+    "sleep": 6,
+    "intention": "Do the important things, not the easy ones",
+    "focus": "Pls order from taobao"
+  },
+  {
+    "id": 660001,
+    "userId": 1,
+    "date": "2026-06-24",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "end work at 7pm",
+    "focus": "creator portal upgrade and buy from taobao"
+  },
+  {
+    "id": 720001,
+    "userId": 1,
+    "date": "2026-06-25",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "stand firm ",
+    "focus": "set expectations and discuss how to work better"
+  },
+  {
+    "id": 750001,
+    "userId": 1,
+    "date": "2026-06-26",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "unwind",
+    "focus": "send torihada contract"
+  },
+  {
+    "id": 780001,
+    "userId": 1,
+    "date": "2026-06-27",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "Make tdy great",
+    "focus": "Socialise"
+  },
+  {
+    "id": 810001,
+    "userId": 1,
+    "date": "2026-06-29",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "keep my own promise",
+    "focus": "make sure 2x social media reels are posted"
+  },
+  {
+    "id": 840001,
+    "userId": 1,
+    "date": "2026-06-30",
+    "mood": 3,
+    "sleep": 5,
+    "intention": "Leave work @ 7pm",
+    "focus": "Contract focus to torihada and museon "
+  },
+  {
+    "id": 870001,
+    "userId": 1,
+    "date": "2026-07-01",
+    "mood": 2,
+    "sleep": 8,
+    "intention": "ENJOY TODAY",
+    "focus": "leave and enjoy the kid laroi's concert"
+  },
+  {
+    "id": 900001,
+    "userId": 1,
+    "date": "2026-07-03",
+    "mood": 3,
+    "sleep": 6,
+    "intention": "TGIF",
+    "focus": "lauv's visitor invitation"
+  },
+  {
+    "id": 930001,
+    "userId": 1,
+    "date": "2026-07-04",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "More love",
+    "focus": "Matchmaking draft #1"
+  },
+  {
+    "id": 960001,
+    "userId": 1,
+    "date": "2026-07-05",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "Adrenaline Detox.",
+    "focus": "Make up my mind and leave the apps"
+  },
+  {
+    "id": 990001,
+    "userId": 1,
+    "date": "2026-07-06",
+    "mood": 3,
+    "sleep": 4,
+    "intention": "Set smaller goals, finish it and call it a day :)",
+    "focus": "Run auto download and uploading + IG/ TT video on spreadsheet"
+  },
+  {
+    "id": 1020001,
+    "userId": 1,
+    "date": "2026-07-07",
+    "mood": 4,
+    "sleep": 7,
+    "intention": "rock the day!",
+    "focus": "type mixers writeup in the morning!!"
+  },
+  {
+    "id": 1050001,
+    "userId": 1,
+    "date": "2026-07-08",
+    "mood": 4,
+    "sleep": 6,
+    "intention": "Have fun and intro them to sg!!",
+    "focus": "Be an excellent host!!"
+  },
+  {
+    "id": 1080001,
+    "userId": 1,
+    "date": "2026-07-09",
+    "mood": 3,
+    "sleep": 5,
+    "intention": "Final prep for mixer",
+    "focus": "Make sure logs are DONE ✅"
+  },
+  {
+    "id": 1110001,
+    "userId": 1,
+    "date": "2026-07-10",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "Spread good vibes",
+    "focus": "Stress test grouping platform"
+  },
+  {
+    "id": 1140001,
+    "userId": 1,
+    "date": "2026-07-12",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "Rejuvenate",
+    "focus": "reflect on fig "
+  },
+  {
+    "id": 1170001,
+    "userId": 1,
+    "date": "2026-07-13",
+    "mood": 4,
+    "sleep": 8,
+    "intention": "Embrace sense of self ❤️",
+    "focus": "Come home bfr 8pm!!"
+  },
+  {
+    "id": 1200001,
+    "userId": 1,
+    "date": "2026-07-14",
+    "mood": 3,
+    "sleep": 9,
+    "intention": "Rest & recover",
+    "focus": "Reflect on life outcome"
+  },
+  {
+    "id": 1230001,
+    "userId": 1,
+    "date": "2026-07-15",
+    "mood": 4,
+    "sleep": 5,
+    "intention": "Focus on what i can comtrol",
+    "focus": "Set out collab goals w rach"
+  },
+  {
+    "id": 1260001,
+    "userId": 1,
+    "date": "2026-07-16",
+    "mood": 2,
+    "sleep": 6,
+    "intention": "Dinner Date!",
+    "focus": "finish review bot"
+  },
+  {
+    "id": 1290001,
+    "userId": 1,
+    "date": "2026-07-17",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "Clear work task this week & log off",
+    "focus": "Return PPP contract"
+  },
+  {
+    "id": 1320001,
+    "userId": 1,
+    "date": "2026-07-18",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "Finite dating",
+    "focus": "Have fun"
+  },
+  {
+    "id": 1350001,
+    "userId": 1,
+    "date": "2026-07-20",
+    "mood": 4,
+    "sleep": 7,
+    "intention": "I am blessed!",
+    "focus": "setting up .md and system harness + eval cases YEEET"
+  },
+  {
+    "id": 1380001,
+    "userId": 1,
+    "date": "2026-07-24",
+    "mood": 3,
+    "sleep": 6,
+    "intention": "piroritise myself",
+    "focus": "have the difficult conversation :<"
+  },
+  {
+    "id": 1410001,
+    "userId": 1,
+    "date": "2026-07-25",
+    "mood": 2,
+    "sleep": 6,
+    "intention": "BUILD BUILD BUILD DAY",
+    "focus": "finish IOS frontend!!!"
+  },
+  {
+    "id": 1440001,
+    "userId": 1,
+    "date": "2026-07-26",
+    "mood": 3,
+    "sleep": 5,
+    "intention": "Push!!",
+    "focus": "finish app UI (last day i promissse)"
+  },
+  {
+    "id": 1470001,
+    "userId": 1,
+    "date": "2026-07-27",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "80% is better than taking 5 days to get to 100%",
+    "focus": "pls push the merge..."
+  },
+  {
+    "id": 1500001,
+    "userId": 1,
+    "date": "2026-07-28",
+    "mood": 1,
+    "sleep": 8,
+    "intention": "Sleep before 12am!!",
+    "focus": "Make sure merge is done and then PASS IT TO RACH"
+  },
+  {
+    "id": 1530001,
+    "userId": 1,
+    "date": "2026-07-29",
+    "mood": 1,
+    "sleep": 5,
+    "intention": "leave work at 7pm!!",
+    "focus": "humaniser email skill to henry"
+  },
+  {
+    "id": 1560001,
+    "userId": 1,
+    "date": "2026-07-30",
+    "mood": 1,
+    "sleep": 8,
+    "intention": "draw boundaries",
+    "focus": "run!"
+  },
+  {
+    "id": 1590001,
+    "userId": 1,
+    "date": "2026-07-31",
+    "mood": 2,
+    "sleep": 7,
+    "intention": "TGIF!",
+    "focus": "leave work at 5.40!"
+  },
+  {
+    "id": 1620001,
+    "userId": 1,
+    "date": "2026-08-02",
+    "mood": 3,
+    "sleep": 6,
+    "intention": "Enjoy my sunday!!",
+    "focus": "Send out attendance form"
+  },
+  {
+    "id": 1650001,
+    "userId": 1,
+    "date": "2026-08-03",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "enjoy life",
+    "focus": "journal at night!"
+  },
+  {
+    "id": 1680001,
+    "userId": 1,
+    "date": "2026-08-04",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "un-slave @ work",
+    "focus": "evening run!!"
+  },
+  {
+    "id": 1710001,
+    "userId": 1,
+    "date": "2026-08-05",
+    "mood": 3,
+    "sleep": 6,
+    "intention": "go home bfr sunsets!",
+    "focus": "finish demo for front end portal"
+  },
+  {
+    "id": 1740001,
+    "userId": 1,
+    "date": "2026-08-06",
+    "mood": 2,
+    "sleep": 9,
+    "intention": "do the boring things (too)!!!",
+    "focus": "hand over contract deets"
+  },
+  {
+    "id": 1770001,
+    "userId": 1,
+    "date": "2026-08-09",
+    "mood": 2,
+    "sleep": 9,
+    "intention": "do the boring things...",
+    "focus": "front end preview canvas that syncs to the live"
+  },
+  {
+    "id": 1800001,
+    "userId": 1,
+    "date": "2026-08-10",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "user flow up to 90%",
+    "focus": "user ui"
+  },
+  {
+    "id": 1830001,
+    "userId": 1,
+    "date": "2026-08-13",
+    "mood": 2,
+    "sleep": 9,
+    "intention": "Clear up w Elizabeth",
+    "focus": "Go for a run!"
+  },
+  {
+    "id": 1860001,
+    "userId": 1,
+    "date": "2026-08-14",
+    "mood": 3,
+    "sleep": 8,
+    "intention": "do 2 finite tasks",
+    "focus": "FINITE FRONT END (pls)"
+  },
+  {
+    "id": 1890001,
+    "userId": 1,
+    "date": "2026-08-15",
+    "mood": 4,
+    "sleep": 7,
+    "intention": "spread love",
+    "focus": "get tteokbokki from mom's store"
+  },
+  {
+    "id": 1920001,
+    "userId": 1,
+    "date": "2026-08-17",
+    "mood": 3,
+    "sleep": 6,
+    "intention": "Make the day count",
+    "focus": "finalise finite onboarding & profile cards"
+  },
+  {
+    "id": 1950001,
+    "userId": 1,
+    "date": "2026-08-18",
+    "mood": 3,
+    "sleep": 7,
+    "intention": "fight for myself!",
+    "focus": "go get the scope!!!"
+  },
+  {
+    "id": 1980001,
+    "userId": 1,
+    "date": "2026-08-19",
+    "mood": 2,
+    "sleep": 5,
+    "intention": "i do not need to earn a good life ",
+    "focus": "stand firm, know my worth & walk away prize"
+  }
+]
